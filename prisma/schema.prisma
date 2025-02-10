@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum questionType {
+  SINGLE_CHOICE // 单选题
+  MULTIPLE_CHOICE // 多选题
+  TRUE_FALSE // 判断题
+  FILL_IN_BLANK // 填空题
+}
+
+model Questions {
+  id           Int          @id @unique @default(autoincrement())
+  userId       Int          @map("user_id")
+  user         User         @relation(fields: [userId], references: [id])
+  questionType questionType @map("question_type")
+  questionText String       @map("question_text")
+  difficulty   Int?         @default(1)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("questions")
+}
+
+model User {
+  id        Int         @id @unique @default(autoincrement())
+  userName  String      @map("user_name")
+  nickName  String      @map("nick_name")
+  Questions Questions[]
+  Answers   Answers[]
+  Category  Category[]
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@map("user")
+}
+
+model Answers {
+  id         Int      @id @unique @default(autoincrement())
+  userId     Int      @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  answerText String   @map("answer_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("answers")
+}
+
+model Category {
+  id        Int      @id @unique @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  category  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("category")
+}

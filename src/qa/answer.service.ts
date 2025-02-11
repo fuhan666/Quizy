@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
-export class QuestionsService {
+export class AnswerService {
   constructor(private _prisma: PrismaService) {}
-
-  public async getQuestions() {
-    return this._prisma.questions.findMany();
-  }
 }

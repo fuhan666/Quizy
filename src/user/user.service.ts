@@ -15,11 +15,11 @@ export class UserService {
   }
 
   findOne(id: number) {
-    return this._prisma.user.findUnique({ where: { id } });
+    return this._prisma.userEntity.findUnique({ where: { id } });
   }
 
   update(id: number, data: UpdateUserDto) {
-    return this._prisma.user.update({ where: { id }, data });
+    return this._prisma.userEntity.update({ where: { id }, data });
   }
 
   remove(id: number) {

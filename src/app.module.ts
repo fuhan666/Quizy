@@ -6,8 +6,12 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 
 @Module({
-  imports: [QuestionsModule, ConfigModule.forRoot({ isGlobal: true }), UserModule],
+  imports: [
+    QuestionsModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+    UserModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

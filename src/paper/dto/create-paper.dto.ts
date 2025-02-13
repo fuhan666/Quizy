@@ -1,4 +1,4 @@
-import { QA } from 'src/qa/dto/qa.dto';
+import { QA } from 'src/paper/dto/qa.dto';
 
 export class CreatePaperDto {
   qas: QA[];

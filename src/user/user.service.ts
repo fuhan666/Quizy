@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { FindUserDto } from './dto/find-user.dto';
 
 @Injectable()
 export class UserService {
@@ -20,18 +21,41 @@ export class UserService {
   }
 
   public async create({ userName, password }: CreateUserDto) {
-    password = await this._hashPassword(password);
-    const data: Prisma.UserEntityCreateInput = { userName, password };
-    await this._prisma.userEntity.create({ data });
-    return;
+    try {
+      password = await this._hashPassword(password);
+      const data: Prisma.UserEntityCreateInput = { userName, password };
+      const { id } = await this._prisma.userEntity.create({ data });
+      return { id };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return 'Username already exists';
+      }
+      return;
+    }
   }
 
-  findAll() {
-    return `This action returns all user`;
+  findAll(dto: FindUserDto) {
+    const where: Prisma.UserEntityWhereInput = {};
+    if (dto?.userName) where.userName = dto.userName;
+    if (dto?.nickName) where.nickName = dto.nickName;
+    return this._prisma.userEntity.findMany({
+      where,
+      select: { id: true, userName: true, nickName: true },
+      orderBy: { id: 'asc' },
+    });
   }
 
   findOne(id: number) {
-    return this._prisma.userEntity.findUnique({ where: { id } });
+    return this._prisma.userEntity.findUnique({
+      where: { id },
+      select: {
+        userName: true,
+        nickName: true,
+      },
+    });
   }
 
   findOneByUserName(userName: string) {

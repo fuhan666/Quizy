@@ -10,6 +10,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { AnswerModule } from './answer/answer.module';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
     PaperModule,
     AuthModule,
     AnswerModule,
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [

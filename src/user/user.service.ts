@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
+import { ApiException } from 'src/exceptions/api.exception';
 
 @Injectable()
 export class UserService {
@@ -31,9 +37,9 @@ export class UserService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        return 'Username already exists';
+        throw new ApiException('Username already exists', 2002);
       }
-      return;
+      throw error;
     }
   }
 
@@ -63,7 +69,13 @@ export class UserService {
     return this._prisma.userEntity.findFirst({ where });
   }
 
-  public async update(id: number, { nickName, password }: UpdateUserDto) {
+  public async update(user, id: number, { nickName, password }: UpdateUserDto) {
+    if (user.id !== id) {
+      throw new HttpException(
+        'You can only update the currently logged in user',
+        HttpStatus.FORBIDDEN,
+      );
+    }
     const data: Prisma.UserEntityUpdateInput = {};
     if (nickName) data.nickName = nickName;
     if (password) {

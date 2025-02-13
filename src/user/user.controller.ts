@@ -11,7 +11,7 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { SkipAuth } from 'src/auth/skip-auth';
+import { SkipAuth } from 'src/decorators/skip-auth.decorator';
 import { FindUserDto } from './dto/find-user.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.type';
 
@@ -41,10 +41,7 @@ export class UserController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    if (user.id !== +id) {
-      return 'You can only update the currently logged in user';
-    }
-    return this.userService.update(+id, updateUserDto);
+    return this.userService.update(user, +id, updateUserDto);
   }
 
   @Delete(':id')

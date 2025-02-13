@@ -1,1 +1,4 @@
-export class CreateAnswerDto {}
+export class CreateAnswerDto {
+  questionId: number;
+  answerText: string;
+}

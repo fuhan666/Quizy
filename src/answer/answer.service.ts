@@ -42,9 +42,8 @@ export class AnswerService {
   }
 
   async update(userId: number, id: number, { answerText }: UpdateAnswerDto) {
-    const answerRecord = await this._prisma.answerEntity.findUniqueOrThrow({
+    await this._prisma.answerEntity.findUniqueOrThrow({
       where: { id, question: { userId } },
-      include: { question: true },
     });
     const data: Prisma.AnswerEntityUpdateInput = { answerText };
     return this._prisma.answerEntity.update({ where: { id }, data });

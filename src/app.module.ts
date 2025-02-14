@@ -7,9 +7,9 @@ import { UserModule } from './user/user.module';
 import { PaperModule } from './paper/paper.module';
 import { AuthModule } from './auth/auth.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AnswerModule } from './answer/answer.module';
-import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({

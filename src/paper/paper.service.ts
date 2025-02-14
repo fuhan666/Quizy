@@ -3,7 +3,7 @@ import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { ApiException } from 'src/exceptions/api.exception';
+import { ApiException } from 'src/common/exceptions/api.exception';
 import { QA } from './dto/qa.dto';
 
 @Injectable()

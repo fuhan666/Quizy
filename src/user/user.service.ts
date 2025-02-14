@@ -10,7 +10,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
-import { ApiException } from 'src/exceptions/api.exception';
+import { ApiException } from 'src/common/exceptions/api.exception';
 
 @Injectable()
 export class UserService {

@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateAnswerDto } from './dto/create-answer.dto';
 import { UpdateAnswerDto } from './dto/update-answer.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ApiException } from 'src/exceptions/api.exception';
+import { ApiException } from 'src/common/exceptions/api.exception';
 import { Prisma } from '@prisma/client';
 
 @Injectable()

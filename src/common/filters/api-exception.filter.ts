@@ -6,7 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { ApiException } from 'src/exceptions/api.exception';
+import { ApiException } from 'src/common/exceptions/api.exception';
 
 @Catch(Error)
 export class ApiExceptionFilter implements ExceptionFilter {

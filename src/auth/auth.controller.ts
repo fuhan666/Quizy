@@ -1,8 +1,9 @@
-import { Controller, Post, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { SkipAuth } from '../common/decorators/skip-auth.decorator';
 import { RequestUserType } from './dto/request-user.type';
+import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -11,7 +12,7 @@ export class AuthController {
   @SkipAuth()
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  login(@Req() { user }: { user: RequestUserType }) {
+  login(@User() user: RequestUserType) {
     return this._authService.login(user);
   }
 }

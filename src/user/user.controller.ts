@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,6 +13,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { FindUserDto } from './dto/find-user.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.type';
+import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('user')
 export class UserController {
@@ -37,7 +37,7 @@ export class UserController {
 
   @Patch(':id')
   update(
-    @Req() { user }: { user: RequestUserType },
+    @User() user: RequestUserType,
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {

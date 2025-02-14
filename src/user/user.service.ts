@@ -55,7 +55,7 @@ export class UserService {
   }
 
   findOne(id: number) {
-    return this._prisma.userEntity.findUnique({
+    return this._prisma.userEntity.findUniqueOrThrow({
       where: { id },
       select: {
         userName: true,

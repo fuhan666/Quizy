@@ -34,45 +34,25 @@ export class AnswerService {
   }
 
   async findOne(userId: number, id: number) {
-    const answerRecord = await this._prisma.answerEntity.findUnique({
-      where: { id },
+    const answerRecord = await this._prisma.answerEntity.findUniqueOrThrow({
+      where: { id, question: { userId } },
       include: { question: true },
     });
-    if (!answerRecord || answerRecord.question.userId !== userId) {
-      throw new ApiException(
-        'Answer not found or no permission to view this answer',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     return answerRecord;
   }
 
   async update(userId: number, id: number, { answerText }: UpdateAnswerDto) {
-    const answerRecord = await this._prisma.answerEntity.findUnique({
-      where: { id },
+    const answerRecord = await this._prisma.answerEntity.findUniqueOrThrow({
+      where: { id, question: { userId } },
       include: { question: true },
     });
-    if (!answerRecord || answerRecord.question.userId !== userId) {
-      throw new ApiException(
-        'Answer not found or no permission to operate on this answer',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     const data: Prisma.AnswerEntityUpdateInput = { answerText };
     return this._prisma.answerEntity.update({ where: { id }, data });
   }
 
   async remove(userId: number, id: number) {
-    const answerRecord = await this._prisma.answerEntity.findUnique({
-      where: { id },
-      include: { question: true },
+    return this._prisma.answerEntity.delete({
+      where: { id, question: { userId } },
     });
-    if (!answerRecord || answerRecord.question.userId !== userId) {
-      throw new ApiException(
-        'Answer not found or no permission to delete this answer',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    return this._prisma.answerEntity.delete({ where: { id } });
   }
 }

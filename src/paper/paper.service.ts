@@ -25,30 +25,18 @@ export class PaperService {
   }
 
   async findOne(userId: number, id: number) {
-    const paperRecord = await this._prisma.paperEntity.findUnique({
-      where: { id },
+    const paperRecord = await this._prisma.paperEntity.findUniqueOrThrow({
+      where: { id, userId },
     });
-    if (!paperRecord || paperRecord.userId !== userId) {
-      throw new ApiException(
-        'Paper not found or no permission',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     paperRecord.qas = JSON.parse(paperRecord.qas as string);
     return paperRecord;
   }
 
   async update(userId: number, id: number, { qas }: UpdatePaperDto) {
-    const paperRecord = await this._prisma.paperEntity.findUnique({
-      where: { id },
+    await this._prisma.paperEntity.findUniqueOrThrow({
+      where: { id, userId },
     });
-    if (!paperRecord || paperRecord.userId !== userId) {
-      throw new ApiException(
-        'Paper not found or no permission',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     await this._validateQAs(userId, qas);
     const data: Prisma.PaperEntityUpdateInput = {
       qas: JSON.stringify(qas),

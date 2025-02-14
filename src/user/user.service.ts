@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -11,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
 import { ApiException } from 'src/common/exceptions/api.exception';
+import { RequestUserType } from 'src/auth/dto/request-user.type';
 
 @Injectable()
 export class UserService {
@@ -69,7 +65,11 @@ export class UserService {
     return this._prisma.userEntity.findFirst({ where });
   }
 
-  public async update(user, id: number, { nickName, password }: UpdateUserDto) {
+  public async update(
+    user: RequestUserType,
+    id: number,
+    { nickName, password }: UpdateUserDto,
+  ) {
     if (user.id !== id) {
       throw new HttpException(
         'You can only update the currently logged in user',

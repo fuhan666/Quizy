@@ -5,54 +5,91 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { ApiException } from 'src/common/exceptions/api.exception';
 import { QA } from './dto/qa.dto';
+import { PaperPermissionsType } from './dto/paper-permission.type';
 
 @Injectable()
 export class PaperService {
   constructor(private _prisma: PrismaService) {}
 
-  async create(userId: number, { qas }: CreatePaperDto) {
-    await this._validateQAs(userId, qas);
+  private _queryPaperPermissionWhere = (userId: number) => [
+    { userId },
+    {
+      permissions: {
+        path: ['accessibleByUserIds'],
+        array_contains: userId,
+      },
+    },
+    {
+      permissions: {
+        path: ['public'],
+        equals: true,
+      },
+    },
+  ];
+
+  async create(userId: number, dto: CreatePaperDto) {
+    await this._validatePermissions(dto?.permissions);
+    await this._validateQAs(userId, dto.qas);
     const data: Prisma.PaperEntityCreateInput = {
       user: { connect: { id: userId } },
-      qas: JSON.stringify(qas),
+      qas: dto.qas as Prisma.JsonArray,
+      permissions: dto?.permissions as Prisma.JsonObject,
     };
-    const newPaper = this._prisma.paperEntity.create({ data });
-    return newPaper;
+    return this._prisma.paperEntity.create({ data });
   }
 
   findAll(userId: number) {
-    return this._prisma.paperEntity.findMany({ where: { userId } });
+    return this._prisma.paperEntity.findMany({
+      where: {
+        OR: this._queryPaperPermissionWhere(userId),
+      },
+      omit: {
+        permissions: true,
+      },
+      orderBy: { id: 'asc' },
+    });
   }
 
   async findOne(userId: number, id: number) {
     const paperRecord = await this._prisma.paperEntity.findUniqueOrThrow({
-      where: { id, userId },
+      where: { id, OR: this._queryPaperPermissionWhere(userId) },
     });
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    paperRecord.qas = JSON.parse(paperRecord.qas as string);
+    if (paperRecord.userId !== userId) {
+      const { permissions: _, ...rest } = paperRecord;
+      return rest;
+    }
     return paperRecord;
   }
 
-  async update(userId: number, id: number, { qas }: UpdatePaperDto) {
+  async update(
+    userId: number,
+    id: number,
+    { qas, permissions }: UpdatePaperDto,
+  ) {
     await this._prisma.paperEntity.findUniqueOrThrow({
       where: { id, userId },
     });
+    await this._validatePermissions(permissions);
     await this._validateQAs(userId, qas);
-    const data: Prisma.PaperEntityUpdateInput = {
-      qas: JSON.stringify(qas),
-    };
-    const updatedPaper = this._prisma.paperEntity.update({
+    const data: Prisma.PaperEntityUpdateInput = {};
+    if (qas !== undefined) {
+      data.qas = qas as Prisma.JsonArray;
+    }
+    if (permissions !== undefined) {
+      data.permissions = permissions as Prisma.JsonObject;
+    }
+    return this._prisma.paperEntity.update({
       where: { id },
       data,
     });
-    return updatedPaper;
   }
 
   remove(userId: number, id: number) {
     return this._prisma.paperEntity.deleteMany({ where: { id, userId } });
   }
 
-  private async _validateQAs(userId: number, qas: QA[]) {
+  private async _validateQAs(userId: number, qas: QA[] | undefined) {
+    if (!qas) return;
     const uniqueQuestionIds = new Set(qas.map((qa) => qa.questionId));
     const questions = await this._prisma.questionEntity.findMany({
       where: { id: { in: [...uniqueQuestionIds] }, userId },
@@ -92,6 +129,26 @@ export class PaperService {
       ) {
         throw new ApiException(
           'Correct answer must be in the answer list',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+  }
+
+  private async _validatePermissions(permissions?: PaperPermissionsType) {
+    if (!permissions) return;
+    if (permissions?.public) return;
+    if (
+      permissions?.accessibleByUserIds &&
+      permissions.accessibleByUserIds.length > 0
+    ) {
+      const users = await this._prisma.userEntity.findMany({
+        where: { id: { in: permissions.accessibleByUserIds } },
+      });
+
+      if (users.length !== permissions.accessibleByUserIds.length) {
+        throw new ApiException(
+          'One or more user IDs do not exist',
           HttpStatus.BAD_REQUEST,
         );
       }

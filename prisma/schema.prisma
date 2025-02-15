@@ -52,12 +52,13 @@ model AnswerEntity {
 }
 
 model PaperEntity {
-  id        Int        @id @default(autoincrement())
-  userId    Int        @map("user_id")
-  user      UserEntity @relation(fields: [userId], references: [id])
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  qas       Json       @db.JsonB
+  id          Int        @id @default(autoincrement())
+  userId      Int        @map("user_id")
+  user        UserEntity @relation(fields: [userId], references: [id])
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  qas         Json       @db.JsonB
+  permissions Json?      @db.JsonB
 
   @@map("paper")
 }

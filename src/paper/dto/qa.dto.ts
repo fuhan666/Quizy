@@ -1,8 +1,12 @@
-import { QuestionType } from './question-type.dto';
-
-export class QA {
+enum QuestionTypeEnum {
+  SINGLE_CHOICE = 1,
+  MULTIPLE_CHOICE,
+  TRUE_FALSE,
+  FILL_IN_BLANK,
+}
+export type QA = {
   questionId: number;
-  questionType: QuestionType;
+  questionType: QuestionTypeEnum;
   answerIds: number[];
   correctAnswerIds: number[];
-}
+};

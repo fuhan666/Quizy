@@ -5,7 +5,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { ApiException } from 'src/common/exceptions/api.exception';
 import { QA } from './dto/qa.dto';
-import { PaperPermissionsType } from './dto/paper-permission.type';
+import { PaperPermissionsDto } from './dto/paper-permission.dto';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class PaperService {
@@ -32,7 +33,7 @@ export class PaperService {
     await this._validateQAs(userId, dto.qas);
     const data: Prisma.PaperEntityCreateInput = {
       user: { connect: { id: userId } },
-      qas: dto.qas as Prisma.JsonArray,
+      qas: instanceToPlain(dto.qas),
       permissions: dto?.permissions as Prisma.JsonObject,
     };
     return this._prisma.paperEntity.create({ data });
@@ -73,7 +74,7 @@ export class PaperService {
     await this._validateQAs(userId, qas);
     const data: Prisma.PaperEntityUpdateInput = {};
     if (qas !== undefined) {
-      data.qas = qas as Prisma.JsonArray;
+      data.qas = instanceToPlain(qas);
     }
     if (permissions !== undefined) {
       data.permissions = permissions as Prisma.JsonObject;
@@ -135,7 +136,7 @@ export class PaperService {
     }
   }
 
-  private async _validatePermissions(permissions?: PaperPermissionsType) {
+  private async _validatePermissions(permissions?: PaperPermissionsDto) {
     if (!permissions) return;
     if (permissions?.public) return;
     if (

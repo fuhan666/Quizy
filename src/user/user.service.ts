@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
 import { ApiException } from 'src/common/exceptions/api.exception';
-import { RequestUserType } from 'src/auth/dto/request-user.type';
+import { RequestUserType } from 'src/auth/dto/request-user.dto';
 
 @Injectable()
 export class UserService {

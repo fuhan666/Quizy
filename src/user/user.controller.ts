@@ -6,13 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { FindUserDto } from './dto/find-user.dto';
-import { RequestUserType } from 'src/auth/dto/request-user.type';
+import { RequestUserType } from 'src/auth/dto/request-user.dto';
 import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('user')
@@ -26,26 +27,26 @@ export class UserController {
   }
 
   @Get()
-  findAll(dto: FindUserDto) {
+  findAll(@Query() dto: FindUserDto) {
     return this.userService.findAll(dto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  findOne(@Param('id') id: number) {
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')
   update(
     @User() user: RequestUserType,
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(user, +id, updateUserDto);
+    return this.userService.update(user, id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  remove(@Param('id') id: number) {
+    return this.userService.remove(id);
   }
 }

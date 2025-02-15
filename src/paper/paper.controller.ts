@@ -6,11 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  ValidationPipe,
+  UsePipes,
 } from '@nestjs/common';
 import { PaperService } from './paper.service';
 import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
-import { RequestUserType } from 'src/auth/dto/request-user.type';
+import { RequestUserType } from 'src/auth/dto/request-user.dto';
 import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('paper')
@@ -18,6 +20,13 @@ export class PaperController {
   constructor(private readonly papersService: PaperService) {}
 
   @Post()
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  )
   create(
     @User() user: RequestUserType,
     @Body() createPaperDto: CreatePaperDto,
@@ -31,21 +40,28 @@ export class PaperController {
   }
 
   @Get(':id')
-  findOne(@User() user: RequestUserType, @Param('id') id: string) {
-    return this.papersService.findOne(user.id, +id);
+  findOne(@User() user: RequestUserType, @Param('id') id: number) {
+    return this.papersService.findOne(user.id, id);
   }
 
   @Patch(':id')
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  )
   update(
     @User() user: RequestUserType,
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() updatePaperDto: UpdatePaperDto,
   ) {
-    return this.papersService.update(user.id, +id, updatePaperDto);
+    return this.papersService.update(user.id, id, updatePaperDto);
   }
 
   @Delete(':id')
-  remove(@User() user: RequestUserType, @Param('id') id: string) {
-    return this.papersService.remove(user.id, +id);
+  remove(@User() user: RequestUserType, @Param('id') id: number) {
+    return this.papersService.remove(user.id, id);
   }
 }

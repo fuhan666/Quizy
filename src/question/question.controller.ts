@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { QuestionService } from './question.service';
-import { RequestUserType } from 'src/auth/dto/request-user.type';
+import { RequestUserType } from 'src/auth/dto/request-user.dto';
 import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('question')

@@ -7,10 +7,16 @@ import { ApiException } from 'src/common/exceptions/api.exception';
 import { QA } from './dto/qa.dto';
 import { PaperPermissionsDto } from './dto/paper-permission.dto';
 import { instanceToPlain } from 'class-transformer';
+import { QuestionTypeEnum } from './dto/question-type.enum';
+import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
+import { AnswerSheetCorrectAnswerType } from 'src/answer-sheet/dto/answer-sheet-correct-answer.dto';
 
 @Injectable()
 export class PaperService {
-  constructor(private _prisma: PrismaService) {}
+  constructor(
+    private _prisma: PrismaService,
+    private _answerSheetService: AnswerSheetService,
+  ) {}
 
   private _queryPaperPermissionWhere = (userId: number) => [
     { userId },
@@ -154,5 +160,77 @@ export class PaperService {
         );
       }
     }
+  }
+
+  async take(userId: number, id: number) {
+    const { qas } = await this._prisma.paperEntity.findUniqueOrThrow({
+      where: { id, OR: this._queryPaperPermissionWhere(userId) },
+    });
+
+    const qasToTake: Record<string, any>[] = [];
+    const paperAnswers: AnswerSheetCorrectAnswerType[] = [];
+
+    let qaOrder = 0;
+    for (const {
+      questionId,
+      questionType,
+      answerIds,
+      correctAnswerIds,
+    } of qas as unknown as QA[]) {
+      qaOrder++;
+      const qaToTake: Record<string, any> = { order: qaOrder, questionType };
+      const correctAnswers: AnswerSheetCorrectAnswerType = {
+        order: qaOrder,
+        questionId: questionId,
+        questionType: questionType,
+      };
+
+      const { questionText, answers } =
+        await this._prisma.questionEntity.findUniqueOrThrow({
+          where: { id: questionId },
+          include: { answers: true },
+        });
+      qaToTake.questionText = questionText;
+
+      const answersObject = answers.reduce((accumulator, currentObject) => {
+        accumulator[currentObject.id] = currentObject;
+        return accumulator;
+      }, {});
+
+      const qaToTakeAnswers: any[] = [];
+      switch (questionType) {
+        case QuestionTypeEnum.SINGLE_CHOICE:
+        case QuestionTypeEnum.MULTIPLE_CHOICE:
+          for (const answerId in answersObject) {
+            if (answerIds.includes(+answerId)) {
+              const { id, answerText } = answersObject[answerId];
+              qaToTakeAnswers.push({ id, answerText });
+            }
+          }
+          qaToTake.answers = qaToTakeAnswers;
+          correctAnswers.choiceAnswerIds = correctAnswerIds;
+          break;
+        case QuestionTypeEnum.FILL_IN_BLANK:
+          for (const answerId in answersObject) {
+            if (correctAnswerIds.includes(+answerId)) {
+              const { answerText } = answersObject[answerId];
+              qaToTakeAnswers.push(answerText);
+            }
+          }
+          correctAnswers.fillInBlankAnswers = qaToTakeAnswers;
+          break;
+        case QuestionTypeEnum.TRUE_FALSE: // not support yet
+          break;
+      }
+
+      qasToTake.push(qaToTake);
+      paperAnswers.push(correctAnswers);
+    }
+
+    const { id: answerSheetId } = await this._answerSheetService.create({
+      userId,
+      correctAnswers: paperAnswers,
+    });
+    return { qas: qasToTake, answerSheetId };
   }
 }

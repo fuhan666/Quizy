@@ -64,4 +64,9 @@ export class PaperController {
   remove(@User() user: RequestUserType, @Param('id') id: number) {
     return this.papersService.remove(user.id, id);
   }
+
+  @Post(':id/take')
+  take(@User() user: RequestUserType, @Param('id') id: number) {
+    return this.papersService.take(user.id, id);
+  }
 }

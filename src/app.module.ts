@@ -10,7 +10,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AnswerModule } from './answer/answer.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from './shared/prisma/prisma.module';
 import { AnswerSheetModule } from './answer-sheet/answer-sheet.module';
 
 @Module({

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateAnswerSheetDto } from './dto/create-answer-sheet.dto';
 import { UpdateAnswerSheetDto } from './dto/update-answer-sheet.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { instanceToPlain } from 'class-transformer';
 import { QuestionTypeEnum } from 'src/paper/dto/question-type.enum';

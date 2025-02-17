@@ -15,6 +15,10 @@ export class QA {
   @IsEnum(QuestionTypeEnum)
   questionType: QuestionTypeEnum;
 
+  @IsNumber()
+  @IsPositive()
+  score: number;
+
   @IsArray()
   @ArrayNotEmpty()
   @IsPositive({ each: true })

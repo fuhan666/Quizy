@@ -174,6 +174,7 @@ export class PaperService {
     for (const {
       questionId,
       questionType,
+      score,
       answerIds,
       correctAnswerIds,
     } of qas as unknown as QA[]) {
@@ -181,8 +182,9 @@ export class PaperService {
       const qaToTake: Record<string, any> = { order: qaOrder, questionType };
       const correctAnswers: AnswerSheetCorrectAnswerType = {
         order: qaOrder,
-        questionId: questionId,
-        questionType: questionType,
+        questionId,
+        questionType,
+        score,
       };
 
       const { questionText, answers } =

@@ -4,6 +4,7 @@ export type AnswerSheetCorrectAnswerType = {
   order: number;
   questionId: number;
   questionType: QuestionTypeEnum;
+  score: number;
   choiceAnswerIds?: number[];
   fillInBlankAnswers?: string[];
   trueFalseAnswer?: boolean;

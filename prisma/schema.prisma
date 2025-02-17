@@ -72,6 +72,7 @@ model AnswerSheetEntity {
   updatedAt      DateTime   @updatedAt @map("updated_at")
   correctAnswers Json       @map("correct_answers") @db.JsonB
   answers        Json?      @db.JsonB
+  score          Float?
   startTime      DateTime?  @map("start_time")
   finishTime     DateTime?  @map("finish_time")
 

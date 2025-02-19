@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
@@ -13,6 +12,7 @@ import { AnswerSheetService } from './answer-sheet.service';
 import { UpdateAnswerSheetDto } from './dto/update-answer-sheet.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
+import mongoose from 'mongoose';
 
 @Controller('answer-sheet')
 export class AnswerSheetController {
@@ -38,14 +38,14 @@ export class AnswerSheetController {
   )
   update(
     @User() user: RequestUserType,
-    @Param('id') id: number,
+    @Param('id') id: mongoose.Types.ObjectId,
     @Body() dto: UpdateAnswerSheetDto,
   ) {
     return this.answerSheetService.update(id, user.id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.answerSheetService.remove(+id);
+  remove(@Param('id') id: mongoose.Types.ObjectId) {
+    return this.answerSheetService.remove(id);
   }
 }

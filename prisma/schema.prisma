@@ -13,68 +13,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model QuestionEntity {
-  id           Int            @id @default(autoincrement())
-  userId       Int            @map("user_id")
-  user         UserEntity     @relation(fields: [userId], references: [id])
-  questionText String         @map("question_text") @db.Text
-  difficulty   Int?           @default(1) @db.SmallInt
-  status       Int            @default(1) @db.SmallInt
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  answers      AnswerEntity[]
-
-  @@map("question")
-}
-
 model UserEntity {
-  id                Int                 @id @default(autoincrement())
-  userName          String              @unique @map("user_name") @db.Text
-  nickName          String?             @map("nick_name") @db.Text
-  password          String              @db.Text
-  questions         QuestionEntity[]
-  papers            PaperEntity[]
-  createdAt         DateTime            @default(now()) @map("created_at")
-  updatedAt         DateTime            @updatedAt @map("updated_at")
-  AnswerSheetEntity AnswerSheetEntity[]
+  id        Int      @id @default(autoincrement())
+  userName  String   @unique @map("user_name") @db.Text
+  nickName  String?  @map("nick_name") @db.Text
+  password  String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("user")
-}
-
-model AnswerEntity {
-  id         Int            @id @default(autoincrement())
-  questionId Int            @map("question_id")
-  question   QuestionEntity @relation(fields: [questionId], references: [id])
-  answerText String         @map("answer_text") @db.Text
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
-
-  @@map("answer")
-}
-
-model PaperEntity {
-  id          Int        @id @default(autoincrement())
-  userId      Int        @map("user_id")
-  user        UserEntity @relation(fields: [userId], references: [id])
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  qas         Json       @db.JsonB
-  permissions Json?      @db.JsonB
-
-  @@map("paper")
-}
-
-model AnswerSheetEntity {
-  id             Int        @id @default(autoincrement())
-  userId         Int        @map("user_id")
-  user           UserEntity @relation(fields: [userId], references: [id])
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
-  correctAnswers Json       @map("correct_answers") @db.JsonB
-  answers        Json?      @db.JsonB
-  score          Float?
-  startTime      DateTime?  @map("start_time")
-  finishTime     DateTime?  @map("finish_time")
-
-  @@map("answer_sheet")
 }

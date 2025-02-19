@@ -1,20 +1,32 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/shared/prisma/prisma.service';
+import { Question } from './schema/question.schema';
+import { Model } from 'mongoose';
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class QuestionService {
-  constructor(private _prisma: PrismaService) {}
+  constructor(
+    @InjectModel(Question.name)
+    private _questionModel: Model<Question>,
+  ) {}
 
   public async getQuestions(userId: number) {
-    return this._prisma.questionEntity.findMany({ where: { userId } });
+    return this._questionModel.find({ userId });
   }
 
-  create(userId: number, questionText: string) {
-    const data: Prisma.QuestionEntityCreateInput = {
-      questionText,
-      user: { connect: { id: userId } },
-    };
-    return this._prisma.questionEntity.create({ data });
+  create(userId: number, dto: CreateQuestionDto) {
+    const answers = new Map<string, string>();
+    dto.answers.map((text) => {
+      answers.set(uuidv4(), text);
+    });
+
+    const question = new this._questionModel({
+      userId,
+      ...dto,
+      answers,
+    });
+    return question.save();
   }
 }

@@ -2,65 +2,80 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { ApiException } from 'src/common/exceptions/api.exception';
-import { QA } from './dto/qa.dto';
+import { PaperQuestionDto } from './dto/qa.dto';
 import { PaperPermissionsDto } from './dto/paper-permission.dto';
-import { instanceToPlain } from 'class-transformer';
 import { QuestionTypeEnum } from './dto/question-type.enum';
 import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
 import { AnswerSheetCorrectAnswerType } from 'src/answer-sheet/dto/answer-sheet-correct-answer.dto';
-
+import { Paper, PaperDocument } from './schema/paper.schema';
+import mongoose, { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import {
+  Question,
+  QuestionDocument,
+} from 'src/question/schema/question.schema';
 @Injectable()
 export class PaperService {
   constructor(
     private _prisma: PrismaService,
     private _answerSheetService: AnswerSheetService,
+    @InjectModel(Paper.name)
+    private _paperModel: Model<Paper>,
+    @InjectModel(Question.name)
+    private _questionModel: Model<Question>,
   ) {}
 
-  private _queryPaperPermissionWhere = (userId: number) => [
-    { userId },
-    {
-      permissions: {
-        path: ['accessibleByUserIds'],
-        array_contains: userId,
+  private _queryPaperPermissionWhere = (userId: number) => ({
+    $or: [
+      { userId },
+      {
+        $and: [
+          { 'permissions.accessibleByUserIds': { $exists: true } },
+          { 'permissions.accessibleByUserIds': { $in: [userId] } },
+        ],
       },
-    },
-    {
-      permissions: {
-        path: ['public'],
-        equals: true,
+      {
+        $and: [
+          { 'permissions.public': { $exists: true } },
+          { 'permissions.public': true },
+        ],
       },
-    },
-  ];
+    ],
+  });
 
-  async create(userId: number, dto: CreatePaperDto) {
-    await this._validatePermissions(dto?.permissions);
-    await this._validateQAs(userId, dto.qas);
-    const data: Prisma.PaperEntityCreateInput = {
-      user: { connect: { id: userId } },
-      qas: instanceToPlain(dto.qas),
-      permissions: dto?.permissions as Prisma.JsonObject,
-    };
-    return this._prisma.paperEntity.create({ data });
+  async create(
+    userId: number,
+    { paperQuestions, permissions }: CreatePaperDto,
+  ) {
+    await this._validatePermissions(permissions);
+    await this._validateQuestions(userId, paperQuestions);
+    const data = { userId, paperQuestions, permissions };
+    const paper = new this._paperModel(data);
+    await paper.save();
+    return paper;
   }
 
   findAll(userId: number) {
-    return this._prisma.paperEntity.findMany({
-      where: {
-        OR: this._queryPaperPermissionWhere(userId),
-      },
-      omit: {
-        permissions: true,
-      },
-      orderBy: { id: 'asc' },
-    });
+    const papers = this._paperModel
+      .find(this._queryPaperPermissionWhere(userId), {
+        permissions: 0,
+      })
+      .sort({
+        _id: -1,
+      })
+      .exec();
+    return papers;
   }
 
-  async findOne(userId: number, id: number) {
-    const paperRecord = await this._prisma.paperEntity.findUniqueOrThrow({
-      where: { id, OR: this._queryPaperPermissionWhere(userId) },
+  async findOne(userId: number, id: mongoose.Types.ObjectId) {
+    const paperRecord = await this._paperModel.findOne({
+      ...this._queryPaperPermissionWhere(userId),
+      _id: id,
     });
+    if (!paperRecord) {
+      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+    }
     if (paperRecord.userId !== userId) {
       const { permissions: _, ...rest } = paperRecord;
       return rest;
@@ -70,37 +85,56 @@ export class PaperService {
 
   async update(
     userId: number,
-    id: number,
-    { qas, permissions }: UpdatePaperDto,
+    id: mongoose.Types.ObjectId,
+    { paperQuestions, permissions }: UpdatePaperDto,
   ) {
-    await this._prisma.paperEntity.findUniqueOrThrow({
-      where: { id, userId },
+    const existingPaper: PaperDocument | null = await this._paperModel.findOne({
+      _id: id,
+      userId,
     });
+    if (!existingPaper) {
+      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+    }
     await this._validatePermissions(permissions);
-    await this._validateQAs(userId, qas);
-    const data: Prisma.PaperEntityUpdateInput = {};
-    if (qas !== undefined) {
-      data.qas = instanceToPlain(qas);
+    await this._validateQuestions(userId, paperQuestions);
+
+    const updateData: Partial<Paper> = {};
+    if (paperQuestions !== undefined) {
+      updateData.paperQuestions = paperQuestions;
     }
     if (permissions !== undefined) {
-      data.permissions = permissions as Prisma.JsonObject;
+      updateData.permissions = permissions;
     }
-    return this._prisma.paperEntity.update({
-      where: { id },
-      data,
-    });
+
+    const paper = await this._paperModel.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: updateData },
+      { new: true },
+    );
+
+    if (!paper) {
+      throw new ApiException(
+        'Paper update failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return paper;
   }
 
-  remove(userId: number, id: number) {
-    return this._prisma.paperEntity.deleteMany({ where: { id, userId } });
+  remove(userId: number, id: mongoose.Types.ObjectId) {
+    return this._paperModel.deleteMany({ _id: id, userId });
   }
 
-  private async _validateQAs(userId: number, qas: QA[] | undefined) {
-    if (!qas) return;
-    const uniqueQuestionIds = new Set(qas.map((qa) => qa.questionId));
-    const questions = await this._prisma.questionEntity.findMany({
-      where: { id: { in: [...uniqueQuestionIds] }, userId },
-      include: { answers: true },
+  private async _validateQuestions(
+    userId: number,
+    paperQuestions: PaperQuestionDto[] | undefined,
+  ) {
+    if (!paperQuestions) return;
+    const uniqueQuestionIds = new Set(paperQuestions.map((q) => q.questionId));
+    const questions: QuestionDocument[] = await this._questionModel.find({
+      userId,
+      _id: { $in: [...uniqueQuestionIds] },
     });
     if (questions.length !== uniqueQuestionIds.size) {
       throw new ApiException(
@@ -108,30 +142,26 @@ export class PaperService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const questionMap = new Map(
-      questions.map((question) => [question.id, question]),
+
+    const questionMap: Map<mongoose.Types.ObjectId, QuestionDocument> = new Map(
+      questions.map((q) => [q._id, q]),
     );
-    for (const { questionId, answerIds, correctAnswerIds } of qas) {
-      const question = questionMap.get(questionId);
-      if (!question) {
+    for (const { questionId, answerIds, correctAnswerIds } of paperQuestions) {
+      const questionDocument = questionMap.get(questionId);
+      if (!questionDocument) {
         continue;
       }
-      const relatedAnswerIds = question.answers.map((answer) => answer.id);
-      if (!answerIds || answerIds.length === 0) {
+      if (
+        !answerIds.every((answerId) => questionDocument.answers.has(answerId))
+      ) {
         throw new ApiException(
-          'The question must have at least one answer',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      if (!answerIds.every((answerId) => relatedAnswerIds.includes(answerId))) {
-        throw new ApiException(
-          'Contains an answer that does not exist or has no permissions',
+          'Answer must belongs to the question',
           HttpStatus.BAD_REQUEST,
         );
       }
       if (
-        !correctAnswerIds.every((correctAnswerId) =>
-          answerIds.includes(correctAnswerId),
+        !correctAnswerIds.every((correctId) =>
+          questionDocument.answers.has(correctId),
         )
       ) {
         throw new ApiException(
@@ -162,12 +192,23 @@ export class PaperService {
     }
   }
 
-  async take(userId: number, id: number) {
-    const { qas } = await this._prisma.paperEntity.findUniqueOrThrow({
-      where: { id, OR: this._queryPaperPermissionWhere(userId) },
-    });
+  async take(userId: number, id: mongoose.Types.ObjectId) {
+    const paper: PaperDocument | null = await this._paperModel.findById(id);
+    if (!paper) {
+      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+    }
+    const { paperQuestions, permissions } = paper;
+    if (permissions && paper.userId !== userId) {
+      if (!permissions?.public) {
+        if (permissions?.accessibleByUserIds) {
+          if (!permissions.accessibleByUserIds.includes(userId)) {
+            throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+          }
+        }
+      }
+    }
 
-    const qasToTake: Record<string, any>[] = [];
+    const questionsToTake: Record<string, any>[] = [];
     const paperAnswers: AnswerSheetCorrectAnswerType[] = [];
 
     let qaOrder = 0;
@@ -177,9 +218,12 @@ export class PaperService {
       score,
       answerIds,
       correctAnswerIds,
-    } of qas as unknown as QA[]) {
+    } of paperQuestions) {
       qaOrder++;
-      const qaToTake: Record<string, any> = { order: qaOrder, questionType };
+      const questionToTake: Record<string, any> = {
+        order: qaOrder,
+        questionType,
+      };
       const correctAnswers: AnswerSheetCorrectAnswerType = {
         order: qaOrder,
         questionId,
@@ -187,35 +231,30 @@ export class PaperService {
         score,
       };
 
-      const { questionText, answers } =
-        await this._prisma.questionEntity.findUniqueOrThrow({
-          where: { id: questionId },
-          include: { answers: true },
-        });
-      qaToTake.questionText = questionText;
-
-      const answersObject = answers.reduce((accumulator, currentObject) => {
-        accumulator[currentObject.id] = currentObject;
-        return accumulator;
-      }, {});
+      const question = await this._questionModel.findById(questionId);
+      if (!question) {
+        throw new ApiException('Question not found', HttpStatus.NOT_FOUND);
+      }
+      questionToTake.questionText = question.questionText;
+      const answers = question.answers;
 
       const qaToTakeAnswers: any[] = [];
       switch (questionType) {
         case QuestionTypeEnum.SINGLE_CHOICE:
         case QuestionTypeEnum.MULTIPLE_CHOICE:
-          for (const answerId in answersObject) {
-            if (answerIds.includes(+answerId)) {
-              const { id, answerText } = answersObject[answerId];
-              qaToTakeAnswers.push({ id, answerText });
+          for (const answerId of answerIds) {
+            if (answers.has(answerId)) {
+              const answerText = answers.get(answerId);
+              qaToTakeAnswers.push({ id: answerId, answerText });
             }
           }
-          qaToTake.answers = qaToTakeAnswers;
+          questionToTake.answers = qaToTakeAnswers;
           correctAnswers.choiceAnswerIds = correctAnswerIds;
           break;
         case QuestionTypeEnum.FILL_IN_BLANK:
-          for (const answerId in answersObject) {
-            if (correctAnswerIds.includes(+answerId)) {
-              const { answerText } = answersObject[answerId];
+          for (const answerId of correctAnswerIds) {
+            if (answers.has(answerId)) {
+              const answerText = answers.get(answerId);
               qaToTakeAnswers.push(answerText);
             }
           }
@@ -225,7 +264,7 @@ export class PaperService {
           break;
       }
 
-      qasToTake.push(qaToTake);
+      questionsToTake.push(questionToTake);
       paperAnswers.push(correctAnswers);
     }
 
@@ -233,6 +272,6 @@ export class PaperService {
       userId,
       correctAnswers: paperAnswers,
     });
-    return { qas: qasToTake, answerSheetId };
+    return { questions: questionsToTake, answerSheetId };
   }
 }

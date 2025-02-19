@@ -1,22 +1,25 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateAnswerSheetDto } from './dto/create-answer-sheet.dto';
 import { UpdateAnswerSheetDto } from './dto/update-answer-sheet.dto';
-import { PrismaService } from 'src/shared/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { instanceToPlain } from 'class-transformer';
 import { QuestionTypeEnum } from 'src/paper/dto/question-type.enum';
-import { AnswerSheetCorrectAnswerType } from './dto/answer-sheet-correct-answer.dto';
+import mongoose, { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { AnswerSheet } from './schema/answer-sheet.schema';
+import { AnswerSheetAnswerDto } from './dto/answer-sheet-answer.dto';
 
 @Injectable()
 export class AnswerSheetService {
-  constructor(private _prisma: PrismaService) {}
+  constructor(
+    @InjectModel(AnswerSheet.name)
+    private _answerSheetModel: Model<AnswerSheet>,
+  ) {}
   create({ userId, correctAnswers }: CreateAnswerSheetDto) {
-    const data: Prisma.AnswerSheetEntityCreateInput = {
-      user: { connect: { id: userId } },
-      correctAnswers: correctAnswers as Prisma.JsonArray,
-      startTime: new Date(),
-    };
-    return this._prisma.answerSheetEntity.create({ data });
+    const answerSheet = new this._answerSheetModel({
+      userId,
+      correctAnswers,
+      startedAt: new Date(),
+    });
+    return answerSheet.save();
   }
 
   findAll() {
@@ -27,8 +30,12 @@ export class AnswerSheetService {
     return `This action returns a #${id} answerSheet`;
   }
 
-  async update(id: number, userId: number, { answers }: UpdateAnswerSheetDto) {
-    const orders = answers.map((answer) => answer.order);
+  async update(
+    id: mongoose.Types.ObjectId,
+    userId: number,
+    { answers }: UpdateAnswerSheetDto,
+  ) {
+    const orders = answers.map((a) => a.order);
     const uniqueOrders = new Set(orders);
     if (uniqueOrders.size !== answers.length) {
       throw new BadRequestException(
@@ -36,38 +43,40 @@ export class AnswerSheetService {
       );
     }
 
-    const data: Prisma.AnswerSheetEntityUpdateInput = {
-      answers: instanceToPlain(answers),
-      finishTime: new Date(),
-    };
-    await this._prisma.answerSheetEntity.update({
-      where: { id, userId },
-      data,
-    });
+    const answerSheet = await this._answerSheetModel.findById(id);
+    if (!answerSheet) {
+      throw new BadRequestException('Answer sheet not found');
+    }
+    if (answerSheet.userId !== userId) {
+      throw new BadRequestException('Answer sheet not found');
+    }
+    answerSheet.answers = answers;
+    answerSheet.finishedAt = new Date();
+    await answerSheet.save();
 
     this.calculateScore(id);
     return 'Submission successfully';
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} answerSheet`;
+  remove(id: mongoose.Types.ObjectId) {
+    return this._answerSheetModel.findByIdAndDelete(id);
   }
 
-  async calculateScore(id: number) {
+  async calculateScore(id: mongoose.Types.ObjectId) {
     let totalScore = 0;
 
-    const answerSheetRecord =
-      await this._prisma.answerSheetEntity.findUniqueOrThrow({ where: { id } });
+    const answerSheetDocument = await this._answerSheetModel.findById(id);
+    if (!answerSheetDocument) return;
 
-    const answers = answerSheetRecord.answers as Prisma.JsonArray;
+    const answers = answerSheetDocument.answers as AnswerSheetAnswerDto[];
     if (!answers || answers.length === 0) return;
-    const answersMap = answers.reduce((acc, answer) => {
-      acc.set((answer as any).order, answer);
-      return acc;
-    }, new Map());
 
-    const correctAnswers =
-      answerSheetRecord.correctAnswers as AnswerSheetCorrectAnswerType[];
+    const answersMap = answers.reduce((acc, answer) => {
+      acc.set(answer.order, answer);
+      return acc;
+    }, new Map<number, AnswerSheetAnswerDto>());
+
+    const correctAnswers = answerSheetDocument.correctAnswers;
     for (const {
       order,
       questionType,
@@ -85,7 +94,7 @@ export class AnswerSheetService {
             choiceAnswerIds &&
             this.areArraysEqualRegardlessOrder(
               choiceAnswerIds,
-              answer.answerIds,
+              answer?.answerIds || [],
             )
           ) {
             totalScore += score;
@@ -94,23 +103,20 @@ export class AnswerSheetService {
         case QuestionTypeEnum.FILL_IN_BLANK:
           if (
             fillInBlankAnswers &&
-            fillInBlankAnswers.some((a) => a === answer.answer)
+            fillInBlankAnswers.some((a) => a === answer?.answerText)
           ) {
             totalScore += score;
           }
           break;
       }
     }
-    await this._prisma.answerSheetEntity.update({
-      where: { id },
-      data: { score: totalScore },
-    });
+    await this._answerSheetModel.findByIdAndUpdate(id, { score: totalScore });
   }
 
-  areArraysEqualRegardlessOrder(arr1: number[], arr2: number[]): boolean {
+  areArraysEqualRegardlessOrder(arr1: string[], arr2: string[]): boolean {
     if (arr1.length !== arr2.length) return false;
 
-    const countMap = new Map<number, number>();
+    const countMap = new Map<string, number>();
 
     arr1.forEach((element) => {
       countMap.set(element, (countMap.get(element) || 0) + 1);

@@ -1,4 +1,4 @@
-import { QA } from 'src/paper/dto/qa.dto';
+import { PaperQuestionDto } from 'src/paper/dto/qa.dto';
 import { PaperPermissionsDto } from './paper-permission.dto';
 import {
   IsArray,
@@ -13,8 +13,8 @@ export class CreatePaperDto {
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })
-  @Type(() => QA)
-  qas: QA[];
+  @Type(() => PaperQuestionDto)
+  paperQuestions: PaperQuestionDto[];
 
   @IsOptional()
   @IsObject()

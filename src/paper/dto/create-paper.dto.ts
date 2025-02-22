@@ -1,4 +1,4 @@
-import { PaperQuestionDto } from 'src/paper/dto/qa.dto';
+import { PaperQuestionDto } from 'src/paper/dto/paper-question.dto';
 import { PaperPermissionsDto } from './paper-permission.dto';
 import {
   IsArray,
@@ -6,10 +6,16 @@ import {
   ValidateNested,
   IsOptional,
   ArrayNotEmpty,
+  IsNotEmpty,
+  IsString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePaperDto {
+  @IsString()
+  @IsNotEmpty()
+  paperName: string;
+
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })

@@ -3,7 +3,7 @@ import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { ApiException } from 'src/common/exceptions/api.exception';
-import { PaperQuestionDto } from './dto/qa.dto';
+import { PaperQuestionDto } from './dto/paper-question.dto';
 import { PaperPermissionsDto } from './dto/paper-permission.dto';
 import { QuestionTypeEnum } from './dto/question-type.enum';
 import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
@@ -15,6 +15,7 @@ import {
   Question,
   QuestionDocument,
 } from 'src/question/schema/question.schema';
+import { PaperQuestionDetailDto } from './dto/paper-question-detail.dto';
 @Injectable()
 export class PaperService {
   constructor(
@@ -46,11 +47,11 @@ export class PaperService {
 
   async create(
     userId: number,
-    { paperQuestions, permissions }: CreatePaperDto,
+    { paperName, paperQuestions, permissions }: CreatePaperDto,
   ) {
     await this._validatePermissions(permissions);
     await this._validateQuestions(userId, paperQuestions);
-    const data = { userId, paperQuestions, permissions };
+    const data = { userId, paperName, paperQuestions, permissions };
     const paper = new this._paperModel(data);
     await paper.save();
     return paper;
@@ -73,14 +74,42 @@ export class PaperService {
       ...this._queryPaperPermissionWhere(userId),
       _id: id,
     });
+
     if (!paperRecord) {
       throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
     }
+
+    const paperQuestionDetails = await Promise.all(
+      paperRecord.paperQuestions.map(async (question) => {
+        const questionRecord = await this._questionModel.findOne({
+          _id: question.questionId,
+        });
+
+        if (!questionRecord) {
+          throw new ApiException('Question not found', HttpStatus.NOT_FOUND);
+        }
+
+        return {
+          questionId: question.questionId,
+          questionType: question.questionType,
+          score: question.score,
+          correctAnswerIds: question.correctAnswerIds,
+          questionText: questionRecord.questionText,
+          answers: Object.fromEntries(questionRecord.answers),
+        } as PaperQuestionDetailDto;
+      }),
+    );
+
+    const result = {
+      ...paperRecord.toObject(),
+      paperQuestions: paperQuestionDetails,
+    };
+
     if (paperRecord.userId !== userId) {
-      const { permissions: _, ...rest } = paperRecord;
+      const { permissions, ...rest } = result;
       return rest;
     }
-    return paperRecord;
+    return result;
   }
 
   async update(

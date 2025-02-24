@@ -80,7 +80,7 @@ export class QuestionService {
     );
   }
 
-  async updateQuestionStatusForCreatePaper(
+  async updateStatusWhenAddedToPaper(
     session: ClientSession,
     paperId: mongoose.Types.ObjectId,
     questionIds: mongoose.Types.ObjectId[],
@@ -95,7 +95,12 @@ export class QuestionService {
             paperIds: {
               $cond: {
                 if: { $isArray: '$paperIds' },
-                then: { $setUnion: ['$paperIds', [paperId]] },
+                then: {
+                  $setUnion: [
+                    '$paperIds',
+                    [new mongoose.Types.ObjectId(paperId)],
+                  ],
+                },
                 else: [paperId],
               },
             },
@@ -137,115 +142,23 @@ export class QuestionService {
     newQuestionIds: mongoose.Types.ObjectId[],
     currentQuestionIds: mongoose.Types.ObjectId[],
   ) {
-    // Find questions that are being removed from the paper
-    const deleteQuestionIds = currentQuestionIds.filter(
+    const removedQuestionIds = currentQuestionIds.filter(
       (id) => !newQuestionIds.includes(id),
     );
-
-    // Remove the current paper ID from the paperIds array of deleted questions
-    await this._questionModel.updateMany(
-      { _id: { $in: deleteQuestionIds } },
-      { $pull: { paperIds: new mongoose.Types.ObjectId(paperId) } },
-      { session },
-    );
-
-    // Fetch all questions that need status updates
-    const questionsToUpdate = await this._questionModel.find(
-      {
-        _id: { $in: deleteQuestionIds },
-      },
-      null,
-      { session },
-    );
-
-    // Get all related papers
-    const relatedPaperIds = [
-      ...new Set(questionsToUpdate.flatMap((q) => q.paperIds)),
-    ];
-    const relatedPapers =
-      relatedPaperIds.length > 0
-        ? await this._paperModel.find(
-            {
-              _id: { $in: relatedPaperIds },
-            },
-            null,
-            { session },
-          )
-        : [];
-
-    // Create a map of paper statuses
-    const paperStatusMap = new Map(
-      relatedPapers.map((paper) => [paper._id, paper.status]),
-    );
-
-    // Determine new status for each question
-    const bulkOps = questionsToUpdate.map((question) => {
-      let newStatus: QuestionStatus;
-
-      if (question.paperIds.length === 0) {
-        newStatus = QuestionStatus.UNUSED;
-      } else {
-        const hasLockedPaper = question.paperIds.some(
-          (paperId) => paperStatusMap.get(paperId) === PaperStatus.LOCKED,
-        );
-        newStatus = hasLockedPaper
-          ? QuestionStatus.ANSWERED
-          : QuestionStatus.ADDED_TO_PAPER;
-      }
-
-      return {
-        updateOne: {
-          filter: { _id: question._id },
-          update: { $set: { status: newStatus } },
-        },
-      };
-    });
-
-    if (bulkOps.length > 0) {
-      await this._questionModel.bulkWrite(bulkOps, { session });
-    }
-
-    // Find questions that are being added to the paper
-    const addQuestionIds = newQuestionIds.filter(
+    const addedQuestionIds = newQuestionIds.filter(
       (id) => !currentQuestionIds.includes(id),
     );
-
-    // Add paper reference and update status for newly added questions
-    // Only change status from UNUSED to ADDED_TO_PAPER, preserve other statuses
-    await this._questionModel.updateMany(
-      {
-        _id: { $in: addQuestionIds },
-      },
-      [
-        {
-          $set: {
-            paperIds: {
-              $cond: {
-                if: { $isArray: '$paperIds' },
-                then: {
-                  $setUnion: [
-                    '$paperIds',
-                    [new mongoose.Types.ObjectId(paperId)],
-                  ],
-                },
-                else: [paperId],
-              },
-            },
-            status: {
-              $cond: {
-                if: { $eq: ['$status', QuestionStatus.UNUSED] },
-                then: QuestionStatus.ADDED_TO_PAPER,
-                else: '$status',
-              },
-            },
-          },
-        },
-      ],
-      { session },
-    );
+    await Promise.all([
+      this.updateStatusWhenRemoveFromPaper(
+        session,
+        paperId,
+        removedQuestionIds,
+      ),
+      this.updateStatusWhenAddedToPaper(session, paperId, addedQuestionIds),
+    ]);
   }
 
-  async updateQuestionStatusForDeletePaper(
+  async updateStatusWhenRemoveFromPaper(
     session: ClientSession,
     paperId: mongoose.Types.ObjectId,
     deleteQuestionIds: mongoose.Types.ObjectId[],

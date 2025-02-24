@@ -64,7 +64,7 @@ export class PaperService {
       const paper = new this._paperModel(data);
       await paper.save({ session });
 
-      await this._questionService.updateQuestionStatusForCreatePaper(
+      await this._questionService.updateStatusWhenAddedToPaper(
         session,
         paper._id,
         paperQuestions.map((q) => q.questionId),
@@ -198,7 +198,7 @@ export class PaperService {
       if (!paper) {
         throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
       }
-      await this._questionService.updateQuestionStatusForDeletePaper(
+      await this._questionService.updateStatusWhenRemoveFromPaper(
         session,
         id,
         paper.paperQuestions.map((q) => q.questionId),

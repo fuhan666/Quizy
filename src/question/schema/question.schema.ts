@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument } from 'mongoose';
 import { QuestionStatus } from '../dto/question-status.enum';
 
 export type QuestionDocument = HydratedDocument<Question>;
@@ -15,8 +15,15 @@ export class Question {
   @Prop({ required: true, default: 1 })
   difficulty: number;
 
-  @Prop({ required: true, default: QuestionStatus.UNUSED })
-  status: number;
+  @Prop({
+    required: true,
+    enum: QuestionStatus,
+    default: QuestionStatus.UNUSED,
+  })
+  status: QuestionStatus;
+
+  @Prop({ required: true, type: [mongoose.Types.ObjectId], default: [] })
+  paperIds: mongoose.Types.ObjectId[];
 
   @Prop({
     type: Map,

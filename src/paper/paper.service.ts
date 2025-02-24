@@ -16,10 +16,13 @@ import {
   QuestionDocument,
 } from 'src/question/schema/question.schema';
 import { PaperQuestionDetailDto } from './dto/paper-question-detail.dto';
+import { QuestionService } from 'src/question/question.service';
+import { PaperStatus } from './dto/paper-status.enum';
 @Injectable()
 export class PaperService {
   constructor(
     private _prisma: PrismaService,
+    private _questionService: QuestionService,
     private _answerSheetService: AnswerSheetService,
     @InjectModel(Paper.name)
     private _paperModel: Model<Paper>,
@@ -49,12 +52,32 @@ export class PaperService {
     userId: number,
     { paperName, paperQuestions, permissions }: CreatePaperDto,
   ) {
-    await this._validatePermissions(permissions);
-    await this._validateQuestions(userId, paperQuestions);
-    const data = { userId, paperName, paperQuestions, permissions };
-    const paper = new this._paperModel(data);
-    await paper.save();
-    return paper;
+    const session = await this._paperModel.db.startSession();
+
+    try {
+      session.startTransaction();
+
+      await this._validatePermissions(permissions);
+      await this._validateQuestions(userId, paperQuestions);
+
+      const data = { userId, paperName, paperQuestions, permissions };
+      const paper = new this._paperModel(data);
+      await paper.save({ session });
+
+      await this._questionService.updateQuestionStatusForCreatePaper(
+        session,
+        paper._id,
+        paperQuestions.map((q) => q.questionId),
+      );
+
+      await session.commitTransaction();
+      return paper;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   findAll(userId: number) {
@@ -115,44 +138,79 @@ export class PaperService {
   async update(
     userId: number,
     id: mongoose.Types.ObjectId,
-    { paperQuestions, permissions }: UpdatePaperDto,
+    { paperName, paperQuestions, permissions }: UpdatePaperDto,
   ) {
-    const existingPaper: PaperDocument | null = await this._paperModel.findOne({
-      _id: id,
-      userId,
-    });
-    if (!existingPaper) {
-      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
-    }
-    await this._validatePermissions(permissions);
-    await this._validateQuestions(userId, paperQuestions);
+    const session = await this._paperModel.db.startSession();
 
-    const updateData: Partial<Paper> = {};
-    if (paperQuestions !== undefined) {
-      updateData.paperQuestions = paperQuestions;
-    }
-    if (permissions !== undefined) {
-      updateData.permissions = permissions;
-    }
+    try {
+      session.startTransaction();
 
-    const paper = await this._paperModel.findOneAndUpdate(
-      { _id: id, userId },
-      { $set: updateData },
-      { new: true },
-    );
+      const existingPaper: PaperDocument | null =
+        await this._paperModel.findOne(
+          {
+            _id: id,
+            userId,
+          },
+          null,
+          { session },
+        );
+      if (!existingPaper) {
+        throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+      }
 
-    if (!paper) {
-      throw new ApiException(
-        'Paper update failed',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      await this._validatePermissions(permissions);
+      await this._validateQuestions(userId, paperQuestions);
+
+      if (paperName !== undefined) {
+        existingPaper.paperName = paperName;
+      }
+      if (paperQuestions !== undefined) {
+        await this._questionService.updateQuestionStatusForUpdatePaper(
+          session,
+          id,
+          paperQuestions.map((q) => q.questionId),
+          existingPaper.paperQuestions.map((q) => q.questionId),
+        );
+        existingPaper.paperQuestions = paperQuestions;
+      }
+      if (permissions !== undefined) {
+        existingPaper.permissions = permissions;
+      }
+      await existingPaper.save({ session });
+
+      await session.commitTransaction();
+      return existingPaper;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    return paper;
   }
 
-  remove(userId: number, id: mongoose.Types.ObjectId) {
-    return this._paperModel.deleteMany({ _id: id, userId });
+  async remove(userId: number, id: mongoose.Types.ObjectId) {
+    const session = await this._paperModel.db.startSession();
+    session.startTransaction();
+    try {
+      const paper = await this._paperModel.findOne({ _id: id, userId }, null, {
+        session,
+      });
+      if (!paper) {
+        throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+      }
+      await this._questionService.updateQuestionStatusForDeletePaper(
+        session,
+        id,
+        paper.paperQuestions.map((q) => q.questionId),
+      );
+      await paper.deleteOne({ session });
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   private async _validateQuestions(
@@ -301,6 +359,8 @@ export class PaperService {
       userId,
       correctAnswers: paperAnswers,
     });
+    paper.status = PaperStatus.LOCKED;
+    await paper.save();
     return { questions: questionsToTake, answerSheetId };
   }
 }

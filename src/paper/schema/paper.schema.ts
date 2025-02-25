@@ -20,7 +20,7 @@ export class Paper {
   @Prop({ type: Object })
   permissions?: PaperPermissionsDto;
 
-  @Prop({ enum: PaperStatus, default: PaperStatus.DRAFT })
+  @Prop({ required: true, enum: PaperStatus, default: PaperStatus.DRAFT })
   status: PaperStatus;
 }
 

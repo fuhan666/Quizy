@@ -37,12 +37,14 @@ export class PaperService {
         $and: [
           { 'permissions.accessibleByUserIds': { $exists: true } },
           { 'permissions.accessibleByUserIds': { $in: [userId] } },
+          { status: { $ne: PaperStatus.DRAFT } },
         ],
       },
       {
         $and: [
           { 'permissions.public': { $exists: true } },
           { 'permissions.public': true },
+          { status: { $ne: PaperStatus.DRAFT } },
         ],
       },
     ],
@@ -280,7 +282,10 @@ export class PaperService {
   }
 
   async take(userId: number, id: mongoose.Types.ObjectId) {
-    const paper: PaperDocument | null = await this._paperModel.findById(id);
+    const paper: PaperDocument | null = await this._paperModel.findOne({
+      _id: id,
+      status: { $ne: PaperStatus.DRAFT },
+    });
     if (!paper) {
       throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
     }

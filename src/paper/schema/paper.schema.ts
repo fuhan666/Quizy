@@ -22,6 +22,9 @@ export class Paper {
 
   @Prop({ required: true, enum: PaperStatus, default: PaperStatus.DRAFT })
   status: PaperStatus;
+
+  @Prop({ type: Boolean, default: false })
+  shuffleQuestions: boolean;
 }
 
 export const PaperSchema = SchemaFactory.createForClass(Paper);

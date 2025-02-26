@@ -8,6 +8,7 @@ import {
   ArrayNotEmpty,
   IsNotEmpty,
   IsString,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -27,4 +28,8 @@ export class CreatePaperDto {
   @ValidateNested()
   @Type(() => PaperPermissionsDto)
   permissions?: PaperPermissionsDto;
+
+  @IsOptional()
+  @IsBoolean()
+  shuffleQuestions?: boolean;
 }

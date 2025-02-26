@@ -55,7 +55,12 @@ export class PaperService {
 
   async create(
     userId: number,
-    { paperName, paperQuestions, permissions }: CreatePaperDto,
+    {
+      paperName,
+      shuffleQuestions,
+      paperQuestions,
+      permissions,
+    }: CreatePaperDto,
   ) {
     const session = await this._paperModel.db.startSession();
 
@@ -65,7 +70,13 @@ export class PaperService {
       await this._validatePermissions(permissions);
       await this._validateQuestions(userId, paperQuestions);
 
-      const data = { userId, paperName, paperQuestions, permissions };
+      const data = {
+        userId,
+        paperName,
+        paperQuestions,
+        permissions,
+        shuffleQuestions,
+      };
       const paper = new this._paperModel(data);
       await paper.save({ session });
 
@@ -143,7 +154,12 @@ export class PaperService {
   async update(
     userId: number,
     id: mongoose.Types.ObjectId,
-    { paperName, paperQuestions, permissions }: UpdatePaperDto,
+    {
+      paperName,
+      shuffleQuestions,
+      paperQuestions,
+      permissions,
+    }: UpdatePaperDto,
   ) {
     const session = await this._paperModel.db.startSession();
 
@@ -180,6 +196,9 @@ export class PaperService {
       }
       if (permissions !== undefined) {
         existingPaper.permissions = permissions;
+      }
+      if (shuffleQuestions !== undefined) {
+        existingPaper.shuffleQuestions = shuffleQuestions;
       }
       await existingPaper.save({ session });
 

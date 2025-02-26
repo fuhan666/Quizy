@@ -209,7 +209,7 @@ export class QuestionService {
           (paperId) => paperStatusMap.get(paperId) === PaperStatus.LOCKED,
         );
         newStatus = hasLockedPaper
-          ? QuestionStatus.ANSWERED
+          ? QuestionStatus.ANSWERED_IN_PAPER
           : QuestionStatus.ADDED_TO_PAPER;
       }
 

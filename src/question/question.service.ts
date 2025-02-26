@@ -25,7 +25,7 @@ export class QuestionService {
   create(userId: number, dto: CreateQuestionDto) {
     const answers = new Map<string, string>();
     dto.answers.map((text) => {
-      answers.set(uuidv4(), text);
+      answers.set(uuidv4().replaceAll('-', ''), text);
     });
 
     const question = new this._questionModel({
@@ -57,7 +57,9 @@ export class QuestionService {
       dto.deleteAnswerIds.forEach((id) => currentAnswers.delete(id));
     }
     if (dto.newAnswers) {
-      dto.newAnswers.forEach((text) => currentAnswers.set(uuidv4(), text));
+      dto.newAnswers.forEach((text) =>
+        currentAnswers.set(uuidv4().replaceAll('-', ''), text),
+      );
     }
     if (dto.remainAnswers) {
       for (const key in dto.remainAnswers) {

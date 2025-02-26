@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CreateAnswerSheetDto } from './dto/create-answer-sheet.dto';
 import { UpdateAnswerSheetDto } from './dto/update-answer-sheet.dto';
 import { QuestionTypeEnum } from 'src/paper/dto/question-type.enum';
@@ -38,17 +42,17 @@ export class AnswerSheetService {
     const orders = answers.map((a) => a.order);
     const uniqueOrders = new Set(orders);
     if (uniqueOrders.size !== answers.length) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Answer sheet contains duplicate order values',
       );
     }
 
     const answerSheet = await this._answerSheetModel.findById(id);
     if (!answerSheet) {
-      throw new BadRequestException('Answer sheet not found');
+      throw new NotFoundException('Answer sheet not found');
     }
     if (answerSheet.userId !== userId) {
-      throw new BadRequestException('Answer sheet not found');
+      throw new NotFoundException('Answer sheet not found');
     }
     answerSheet.answers = answers;
     answerSheet.finishedAt = new Date();

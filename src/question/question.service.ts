@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Question, QuestionDocument } from './schema/question.schema';
 import mongoose, { ClientSession, Model } from 'mongoose';
 import { CreateQuestionDto } from './dto/create-question.dto';
@@ -50,7 +50,7 @@ export class QuestionService {
       _id: id,
     });
     if (!r) {
-      throw new BadRequestException('Question not found or no permission');
+      throw new NotFoundException('Question not found or no permission');
     }
     const currentAnswers = r.answers;
     if (dto.deleteAnswerIds) {

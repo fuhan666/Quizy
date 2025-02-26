@@ -1,8 +1,11 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
-import { ApiException } from 'src/common/exceptions/api.exception';
 import { PaperQuestionDto } from './dto/paper-question.dto';
 import { PaperPermissionsDto } from './dto/paper-permission.dto';
 import { QuestionTypeEnum } from './dto/question-type.enum';
@@ -101,7 +104,7 @@ export class PaperService {
     });
 
     if (!paperRecord) {
-      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+      throw new NotFoundException('Paper not found');
     }
 
     const paperQuestionDetails = await Promise.all(
@@ -111,7 +114,7 @@ export class PaperService {
         });
 
         if (!questionRecord) {
-          throw new ApiException('Question not found', HttpStatus.NOT_FOUND);
+          throw new NotFoundException('Question not found');
         }
 
         return {
@@ -157,7 +160,7 @@ export class PaperService {
           { session },
         );
       if (!existingPaper) {
-        throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+        throw new NotFoundException('Paper not found');
       }
 
       await this._validatePermissions(permissions);
@@ -198,7 +201,7 @@ export class PaperService {
         session,
       });
       if (!paper) {
-        throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+        throw new NotFoundException('Paper not found');
       }
       await this._questionService.updateStatusWhenRemoveFromPaper(
         session,
@@ -226,9 +229,8 @@ export class PaperService {
       _id: { $in: [...uniqueQuestionIds] },
     });
     if (questions.length !== uniqueQuestionIds.size) {
-      throw new ApiException(
+      throw new NotFoundException(
         'Contains a question that does not exist or has no permissions',
-        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -243,9 +245,8 @@ export class PaperService {
       if (
         !answerIds.every((answerId) => questionDocument.answers.has(answerId))
       ) {
-        throw new ApiException(
+        throw new UnprocessableEntityException(
           'Answer must belongs to the question',
-          HttpStatus.BAD_REQUEST,
         );
       }
       if (
@@ -253,9 +254,8 @@ export class PaperService {
           questionDocument.answers.has(correctId),
         )
       ) {
-        throw new ApiException(
+        throw new UnprocessableEntityException(
           'Correct answer must be in the answer list',
-          HttpStatus.BAD_REQUEST,
         );
       }
     }
@@ -273,10 +273,7 @@ export class PaperService {
       });
 
       if (users.length !== permissions.accessibleByUserIds.length) {
-        throw new ApiException(
-          'One or more user IDs do not exist',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw new NotFoundException('One or more user IDs do not exist');
       }
     }
   }
@@ -287,14 +284,14 @@ export class PaperService {
       status: { $ne: PaperStatus.DRAFT },
     });
     if (!paper) {
-      throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+      throw new NotFoundException('Paper not found');
     }
     const { paperQuestions, permissions } = paper;
     if (permissions && paper.userId !== userId) {
       if (!permissions?.public) {
         if (permissions?.accessibleByUserIds) {
           if (!permissions.accessibleByUserIds.includes(userId)) {
-            throw new ApiException('Paper not found', HttpStatus.NOT_FOUND);
+            throw new NotFoundException('Paper not found');
           }
         }
       }
@@ -325,7 +322,7 @@ export class PaperService {
 
       const question = await this._questionModel.findById(questionId);
       if (!question) {
-        throw new ApiException('Question not found', HttpStatus.NOT_FOUND);
+        throw new NotFoundException('Question not found');
       }
       questionToTake.questionText = question.questionText;
       const answers = question.answers;

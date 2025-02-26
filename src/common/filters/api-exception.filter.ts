@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ApiException } from 'src/common/exceptions/api.exception';
+
 interface ValidatorErrorResponse {
   message: string[];
   error: string;
@@ -23,6 +24,7 @@ function isValidatorErrorResponse(obj: any): obj is ValidatorErrorResponse {
   );
 }
 /* eslint-enable */
+
 @Catch(Error)
 export class ApiExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
@@ -30,59 +32,83 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse();
 
     if (exception instanceof ApiException) {
-      // eslint-disable-next-line
-      response.status(HttpStatus.OK).json({
-        code: exception.getErrorCode(),
-        message: exception.getErrorMessage(),
-      });
+      this.handleApiException(exception, response);
     } else if (exception instanceof HttpException) {
-      const errorResponse = exception.getResponse();
-      if (isValidatorErrorResponse(errorResponse)) {
-        const validatorMessage = errorResponse.message;
-        // eslint-disable-next-line
-        response.status(HttpStatus.BAD_REQUEST).json({
-          code: HttpStatus.BAD_REQUEST,
-          message: validatorMessage.join('. '),
-        });
-      } else {
-        const status = exception.getStatus();
-        // eslint-disable-next-line
-        response.status(status).json({
-          code: status,
-          message: exception.message,
-        });
-      }
+      this.handleHttpException(exception, response);
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      switch (exception.code) {
-        case 'P2025':
-          // eslint-disable-next-line
-          response.status(HttpStatus.OK).json({
-            code: HttpStatus.BAD_REQUEST,
-            message: 'The result does not exist or there is no permission',
-          });
-          break;
-        default:
-          console.error(
-            `Prisma error ${exception.code}: ${JSON.stringify(exception?.meta)}${exception.message}`,
-          );
-          // eslint-disable-next-line
-          response.status(HttpStatus.OK).json({
-            code: HttpStatus.INTERNAL_SERVER_ERROR,
-            message: 'Internal server error',
-          });
-      }
+      this.handlePrismaKnownError(exception, response);
     } else if (exception instanceof Prisma.PrismaClientValidationError) {
-      // eslint-disable-next-line
-      response
-        .status(HttpStatus.BAD_REQUEST)
-        .json({ code: HttpStatus.BAD_REQUEST, message: 'Bad requests' });
+      this.handleResponse(response, HttpStatus.BAD_REQUEST, 'Bad requests');
     } else {
       console.error(exception);
-      // eslint-disable-next-line
-      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Internal server error',
-      });
+      this.handleResponse(
+        response,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Internal server error',
+      );
     }
+  }
+
+  private handleApiException(exception: ApiException, response: any): void {
+    this.handleResponse(
+      response,
+      HttpStatus.OK,
+      exception.getErrorMessage(),
+      exception.getErrorCode(),
+    );
+  }
+
+  private handleHttpException(exception: HttpException, response: any): void {
+    const errorResponse = exception.getResponse();
+    const status = exception.getStatus();
+
+    if (isValidatorErrorResponse(errorResponse)) {
+      this.handleResponse(
+        response,
+        HttpStatus.BAD_REQUEST,
+        errorResponse.message.join('. '),
+      );
+    } else {
+      this.handleResponse(response, status, exception.message);
+    }
+  }
+
+  private handlePrismaKnownError(
+    exception: Prisma.PrismaClientKnownRequestError,
+    response: any,
+  ): void {
+    switch (exception.code) {
+      case 'P2025':
+        this.handleResponse(
+          response,
+          HttpStatus.NOT_FOUND,
+          'The result does not exist or there is no permission',
+        );
+        break;
+      default:
+        console.error(
+          `Prisma error ${exception.code}: ${JSON.stringify(exception?.meta)}${exception.message}`,
+        );
+        this.handleResponse(
+          response,
+          HttpStatus.OK,
+          'Internal server error',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+    }
+  }
+
+  private handleResponse(
+    response: any,
+    status: HttpStatus,
+    message: string,
+    code?: number,
+  ): void {
+    /* eslint-disable */
+    response.status(status).json({
+      code: code || status,
+      message,
+    });
+    /* eslint-enable */
   }
 }

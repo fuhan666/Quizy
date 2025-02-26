@@ -1,11 +1,15 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
-import { ApiException } from 'src/common/exceptions/api.exception';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
 
 @Injectable()
@@ -33,7 +37,7 @@ export class UserService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ApiException('Username already exists', 2002);
+        throw new ConflictException('Username already exists');
       }
       throw error;
     }

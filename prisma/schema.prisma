@@ -18,6 +18,7 @@ model UserEntity {
   userName  String   @unique @map("user_name") @db.Text
   nickName  String?  @map("nick_name") @db.Text
   password  String   @db.Text
+  avatar    String?  @db.Text
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

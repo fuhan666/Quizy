@@ -6,7 +6,8 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
@@ -38,7 +39,7 @@ export class UserService {
       return { id };
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error instanceof PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
         throw new ConflictException('Username already exists');

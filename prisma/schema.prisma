@@ -14,13 +14,27 @@ datasource db {
 }
 
 model UserEntity {
-  id        Int      @id @default(autoincrement())
-  userName  String   @unique @map("user_name") @db.Text
-  nickName  String?  @map("nick_name") @db.Text
-  password  String   @db.Text
-  avatar    String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               Int                @id @default(autoincrement())
+  userName         String             @unique @map("user_name") @db.Text
+  nickName         String?            @map("nick_name") @db.Text
+  password         String             @db.Text
+  avatar           String?            @db.Text
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  UploadFileEntity UploadFileEntity[]
 
   @@map("user")
+}
+
+model UploadFileEntity {
+  id        Int        @id @default(autoincrement())
+  user      UserEntity @relation(fields: [userId], references: [id])
+  userId    Int        @map("user_id")
+  file      String     @db.Text
+  fileName  String     @map("file_name") @db.Text
+  fileType  String     @map("file_type") @db.VarChar()
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("upload_file")
 }

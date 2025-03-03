@@ -8,6 +8,9 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuestionStatus } from './dto/question-status.enum';
 import { PaperStatus } from 'src/paper/dto/paper-status.enum';
 import { Paper } from 'src/paper/schema/paper.schema';
+import { CloudflareOssService } from 'src/shared/oss/cloudflare/cloudflare-oss.service';
+import { PrismaService } from 'src/shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionService {
@@ -16,6 +19,8 @@ export class QuestionService {
     private _questionModel: Model<Question>,
     @InjectModel(Paper.name)
     private _paperModel: Model<Paper>,
+    private _cloudflareOssService: CloudflareOssService,
+    private _prisma: PrismaService,
   ) {}
 
   public async getQuestions(userId: number) {
@@ -226,5 +231,18 @@ export class QuestionService {
     if (bulkOps.length > 0) {
       await this._questionModel.bulkWrite(bulkOps, { session });
     }
+  }
+
+  async uploadPdf(userId: number, file: Express.Multer.File) {
+    const ext = file.originalname.split('.').pop();
+    const key = `pdfs/${userId}/${uuidv4()}.${ext}`;
+    await this._cloudflareOssService.upload(key, file.buffer, file.mimetype);
+    const data: Prisma.UploadFileEntityCreateInput = {
+      user: { connect: { id: userId } },
+      file: key,
+      fileName: file.originalname,
+      fileType: file.mimetype,
+    };
+    return this._prisma.uploadFileEntity.create({ data });
   }
 }

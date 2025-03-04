@@ -12,10 +12,27 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { PrismaModule } from './shared/prisma/prisma.module';
 import { AnswerSheetModule } from './answer-sheet/answer-sheet.module';
 import { MongooseModule } from '@nestjs/mongoose';
-
+import * as Joi from 'joi';
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'test', 'production')
+          .default('development'),
+        PORT: Joi.number().default(7849),
+        JWT_SECRET: Joi.string(),
+        DATABASE_URL: Joi.string(),
+        MONGODB_URI: Joi.string(),
+        CLOUDFLARE_REGION: Joi.string().default('auto'),
+        CLOUDFLARE_ACCOUNT_ID: Joi.string(),
+        CLOUDFLARE_ACCESS_KEY_ID: Joi.string(),
+        CLOUDFLARE_SECRET_ACCESS_KEY: Joi.string(),
+        CLOUDFLARE_R2_BUCKET: Joi.string(),
+      }),
+    }),
     QuestionModule,
     UserModule,
     PaperModule,

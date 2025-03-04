@@ -42,7 +42,7 @@ export class CloudflareOssService {
       await this.s3Client.send(command);
       return key;
     } catch {
-      throw Error(`Cloudflare put object failed: ${key}`);
+      throw new Error(`Cloudflare put object failed: ${key}`);
     }
   }
 

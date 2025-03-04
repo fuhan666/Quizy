@@ -16,15 +16,15 @@ import { Prisma } from '@prisma/client';
 export class QuestionService {
   constructor(
     @InjectModel(Question.name)
-    private _questionModel: Model<Question>,
+    private readonly questionModel: Model<Question>,
     @InjectModel(Paper.name)
-    private _paperModel: Model<Paper>,
-    private _cloudflareOssService: CloudflareOssService,
-    private _prisma: PrismaService,
+    private readonly paperModel: Model<Paper>,
+    private readonly cloudflareOssService: CloudflareOssService,
+    private readonly prisma: PrismaService,
   ) {}
 
   public async getQuestions(userId: number) {
-    return this._questionModel.find({ userId });
+    return this.questionModel.find({ userId });
   }
 
   create(userId: number, dto: CreateQuestionDto) {
@@ -33,7 +33,7 @@ export class QuestionService {
       answers.set(uuidv4().replaceAll('-', ''), text);
     });
 
-    const question = new this._questionModel({
+    const question = new this.questionModel({
       userId,
       ...dto,
       answers,
@@ -42,7 +42,7 @@ export class QuestionService {
   }
 
   delete(id: string, userId: number) {
-    return this._questionModel.findOneAndDelete({
+    return this.questionModel.findOneAndDelete({
       _id: id,
       userId,
       status: QuestionStatus.UNUSED,
@@ -50,7 +50,7 @@ export class QuestionService {
   }
 
   async update(userId: number, id: string, dto: UpdateQuestionDto) {
-    const r: QuestionDocument | null = await this._questionModel.findOne({
+    const r: QuestionDocument | null = await this.questionModel.findOne({
       userId,
       _id: id,
     });
@@ -78,7 +78,7 @@ export class QuestionService {
     if (dto.difficulty) {
       updateData.difficulty = dto.difficulty;
     }
-    return this._questionModel.findOneAndUpdate(
+    return this.questionModel.findOneAndUpdate(
       { userId, _id: id },
       updateData,
       {
@@ -92,7 +92,7 @@ export class QuestionService {
     paperId: mongoose.Types.ObjectId,
     questionIds: mongoose.Types.ObjectId[],
   ) {
-    await this._questionModel.updateMany(
+    await this.questionModel.updateMany(
       {
         _id: { $in: questionIds },
       },
@@ -170,14 +170,14 @@ export class QuestionService {
     paperId: mongoose.Types.ObjectId,
     deleteQuestionIds: mongoose.Types.ObjectId[],
   ) {
-    await this._questionModel.updateMany(
+    await this.questionModel.updateMany(
       { _id: { $in: deleteQuestionIds } },
       { $pull: { paperIds: new mongoose.Types.ObjectId(paperId) } },
       { session },
     );
 
     // Fetch all questions that need status updates
-    const questionsToUpdate = await this._questionModel.find(
+    const questionsToUpdate = await this.questionModel.find(
       {
         _id: { $in: deleteQuestionIds },
       },
@@ -191,7 +191,7 @@ export class QuestionService {
     ];
     const relatedPapers =
       relatedPaperIds.length > 0
-        ? await this._paperModel.find(
+        ? await this.paperModel.find(
             {
               _id: { $in: relatedPaperIds },
             },
@@ -229,20 +229,20 @@ export class QuestionService {
     });
 
     if (bulkOps.length > 0) {
-      await this._questionModel.bulkWrite(bulkOps, { session });
+      await this.questionModel.bulkWrite(bulkOps, { session });
     }
   }
 
   async uploadPdf(userId: number, file: Express.Multer.File) {
     const ext = file.originalname.split('.').pop();
     const key = `pdfs/${userId}/${uuidv4()}.${ext}`;
-    await this._cloudflareOssService.upload(key, file.buffer, file.mimetype);
+    await this.cloudflareOssService.upload(key, file.buffer, file.mimetype);
     const data: Prisma.UploadFileEntityCreateInput = {
       user: { connect: { id: userId } },
       file: key,
       fileName: file.originalname,
       fileType: file.mimetype,
     };
-    return this._prisma.uploadFileEntity.create({ data });
+    return this.prisma.uploadFileEntity.create({ data });
   }
 }

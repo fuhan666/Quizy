@@ -16,26 +16,24 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UserService {
-  constructor(
-    private _prisma: PrismaService,
-    private _ossService: CloudflareOssService,
-  ) {}
+  private readonly prisma: PrismaService;
+  private readonly ossService: CloudflareOssService;
 
-  private async _hashPassword(password: string) {
+  private async hashPassword(password: string) {
     const salt = await bcrypt.genSalt();
     const hashed = bcrypt.hash(password, salt);
     return hashed;
   }
 
-  public async comparePassword(password: string, hashedPassword: string) {
+  async comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  public async create({ userName, password }: CreateUserDto) {
+  async create({ userName, password }: CreateUserDto) {
     try {
-      password = await this._hashPassword(password);
+      password = await this.hashPassword(password);
       const data: Prisma.UserEntityCreateInput = { userName, password };
-      const { id } = await this._prisma.userEntity.create({ data });
+      const { id } = await this.prisma.userEntity.create({ data });
       return { id };
     } catch (error) {
       if (
@@ -52,7 +50,7 @@ export class UserService {
     const where: Prisma.UserEntityWhereInput = {};
     if (dto?.userName) where.userName = dto.userName;
     if (dto?.nickName) where.nickName = dto.nickName;
-    return this._prisma.userEntity.findMany({
+    return this.prisma.userEntity.findMany({
       where,
       select: { id: true, userName: true, nickName: true },
       orderBy: { id: 'asc' },
@@ -60,7 +58,7 @@ export class UserService {
   }
 
   findOne(id: number) {
-    return this._prisma.userEntity.findUniqueOrThrow({
+    return this.prisma.userEntity.findUniqueOrThrow({
       where: { id },
       select: {
         userName: true,
@@ -72,10 +70,10 @@ export class UserService {
 
   findOneByUserName(userName: string) {
     const where: Prisma.UserEntityWhereInput = { userName };
-    return this._prisma.userEntity.findFirst({ where });
+    return this.prisma.userEntity.findFirst({ where });
   }
 
-  public async uploadAvatar(
+  async uploadAvatar(
     user: RequestUserType,
     id: number,
     file: Express.Multer.File,
@@ -86,14 +84,14 @@ export class UserService {
       );
     }
 
-    const currentUser = await this._prisma.userEntity.findUnique({
+    const currentUser = await this.prisma.userEntity.findUnique({
       where: { id },
       select: { avatar: true },
     });
 
     if (currentUser?.avatar) {
       try {
-        await this._ossService.delete(currentUser.avatar);
+        await this.ossService.delete(currentUser.avatar);
       } catch (error) {
         console.warn('Failed to delete old avatar:', error);
       }
@@ -101,14 +99,14 @@ export class UserService {
 
     const ext = file.originalname.split('.').pop();
     const key = `avatars/${id}/${uuidv4()}.${ext}`;
-    await this._ossService.upload(key, file.buffer, file.mimetype);
+    await this.ossService.upload(key, file.buffer, file.mimetype);
 
     const data: Prisma.UserEntityUpdateInput = { avatar: key };
-    await this._prisma.userEntity.update({ where: { id }, data });
+    await this.prisma.userEntity.update({ where: { id }, data });
     return data;
   }
 
-  public async update(
+  async update(
     user: RequestUserType,
     id: number,
     { nickName, password }: UpdateUserDto,
@@ -121,10 +119,10 @@ export class UserService {
     const data: Prisma.UserEntityUpdateInput = {};
     if (nickName) data.nickName = nickName;
     if (password) {
-      password = await this._hashPassword(password);
+      password = await this.hashPassword(password);
       data.password = password;
     }
-    return this._prisma.userEntity.update({ where: { id }, data });
+    return this.prisma.userEntity.update({ where: { id }, data });
   }
 
   remove(id: number) {

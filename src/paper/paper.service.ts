@@ -24,16 +24,16 @@ import { PaperStatus } from './dto/paper-status.enum';
 @Injectable()
 export class PaperService {
   constructor(
-    private _prisma: PrismaService,
-    private _questionService: QuestionService,
-    private _answerSheetService: AnswerSheetService,
+    private readonly prisma: PrismaService,
+    private readonly questionService: QuestionService,
+    private readonly answerSheetService: AnswerSheetService,
     @InjectModel(Paper.name)
-    private _paperModel: Model<Paper>,
+    private readonly paperModel: Model<Paper>,
     @InjectModel(Question.name)
-    private _questionModel: Model<Question>,
+    private readonly questionModel: Model<Question>,
   ) {}
 
-  private _queryPaperPermissionWhere = (userId: number) => ({
+  private queryPaperPermissionWhere = (userId: number) => ({
     $or: [
       { userId },
       {
@@ -62,13 +62,13 @@ export class PaperService {
       permissions,
     }: CreatePaperDto,
   ) {
-    const session = await this._paperModel.db.startSession();
+    const session = await this.paperModel.db.startSession();
 
     try {
       session.startTransaction();
 
-      await this._validatePermissions(permissions);
-      await this._validateQuestions(userId, paperQuestions);
+      await this.validatePermissions(permissions);
+      await this.validateQuestions(userId, paperQuestions);
 
       const data = {
         userId,
@@ -77,10 +77,10 @@ export class PaperService {
         permissions,
         shuffleQuestions,
       };
-      const paper = new this._paperModel(data);
+      const paper = new this.paperModel(data);
       await paper.save({ session });
 
-      await this._questionService.updateStatusWhenAddedToPaper(
+      await this.questionService.updateStatusWhenAddedToPaper(
         session,
         paper._id,
         paperQuestions.map((q) => q.questionId),
@@ -97,8 +97,8 @@ export class PaperService {
   }
 
   findAll(userId: number) {
-    const papers = this._paperModel
-      .find(this._queryPaperPermissionWhere(userId), {
+    const papers = this.paperModel
+      .find(this.queryPaperPermissionWhere(userId), {
         permissions: 0,
       })
       .sort({
@@ -109,8 +109,8 @@ export class PaperService {
   }
 
   async findOne(userId: number, id: mongoose.Types.ObjectId) {
-    const paperRecord = await this._paperModel.findOne({
-      ...this._queryPaperPermissionWhere(userId),
+    const paperRecord = await this.paperModel.findOne({
+      ...this.queryPaperPermissionWhere(userId),
       _id: id,
     });
 
@@ -120,7 +120,7 @@ export class PaperService {
 
     const paperQuestionDetails = await Promise.all(
       paperRecord.paperQuestions.map(async (question) => {
-        const questionRecord = await this._questionModel.findOne({
+        const questionRecord = await this.questionModel.findOne({
           _id: question.questionId,
         });
 
@@ -161,32 +161,31 @@ export class PaperService {
       permissions,
     }: UpdatePaperDto,
   ) {
-    const session = await this._paperModel.db.startSession();
+    const session = await this.paperModel.db.startSession();
 
     try {
       session.startTransaction();
 
-      const existingPaper: PaperDocument | null =
-        await this._paperModel.findOne(
-          {
-            _id: id,
-            userId,
-          },
-          null,
-          { session },
-        );
+      const existingPaper: PaperDocument | null = await this.paperModel.findOne(
+        {
+          _id: id,
+          userId,
+        },
+        null,
+        { session },
+      );
       if (!existingPaper) {
         throw new NotFoundException('Paper not found');
       }
 
-      await this._validatePermissions(permissions);
-      await this._validateQuestions(userId, paperQuestions);
+      await this.validatePermissions(permissions);
+      await this.validateQuestions(userId, paperQuestions);
 
       if (paperName !== undefined) {
         existingPaper.paperName = paperName;
       }
       if (paperQuestions !== undefined) {
-        await this._questionService.updateQuestionStatusForUpdatePaper(
+        await this.questionService.updateQuestionStatusForUpdatePaper(
           session,
           id,
           paperQuestions.map((q) => q.questionId),
@@ -213,16 +212,16 @@ export class PaperService {
   }
 
   async remove(userId: number, id: mongoose.Types.ObjectId) {
-    const session = await this._paperModel.db.startSession();
+    const session = await this.paperModel.db.startSession();
     session.startTransaction();
     try {
-      const paper = await this._paperModel.findOne({ _id: id, userId }, null, {
+      const paper = await this.paperModel.findOne({ _id: id, userId }, null, {
         session,
       });
       if (!paper) {
         throw new NotFoundException('Paper not found');
       }
-      await this._questionService.updateStatusWhenRemoveFromPaper(
+      await this.questionService.updateStatusWhenRemoveFromPaper(
         session,
         id,
         paper.paperQuestions.map((q) => q.questionId),
@@ -237,13 +236,13 @@ export class PaperService {
     }
   }
 
-  private async _validateQuestions(
+  private async validateQuestions(
     userId: number,
     paperQuestions: PaperQuestionDto[] | undefined,
   ) {
     if (!paperQuestions) return;
     const uniqueQuestionIds = new Set(paperQuestions.map((q) => q.questionId));
-    const questions: QuestionDocument[] = await this._questionModel.find({
+    const questions: QuestionDocument[] = await this.questionModel.find({
       userId,
       _id: { $in: [...uniqueQuestionIds] },
     });
@@ -280,14 +279,14 @@ export class PaperService {
     }
   }
 
-  private async _validatePermissions(permissions?: PaperPermissionsDto) {
+  private async validatePermissions(permissions?: PaperPermissionsDto) {
     if (!permissions) return;
     if (permissions?.public) return;
     if (
       permissions?.accessibleByUserIds &&
       permissions.accessibleByUserIds.length > 0
     ) {
-      const users = await this._prisma.userEntity.findMany({
+      const users = await this.prisma.userEntity.findMany({
         where: { id: { in: permissions.accessibleByUserIds } },
       });
 
@@ -298,7 +297,7 @@ export class PaperService {
   }
 
   async take(userId: number, id: mongoose.Types.ObjectId) {
-    const paper: PaperDocument | null = await this._paperModel.findOne({
+    const paper: PaperDocument | null = await this.paperModel.findOne({
       _id: id,
       status: { $ne: PaperStatus.DRAFT },
     });
@@ -339,7 +338,7 @@ export class PaperService {
         score,
       };
 
-      const question = await this._questionModel.findById(questionId);
+      const question = await this.questionModel.findById(questionId);
       if (!question) {
         throw new NotFoundException('Question not found');
       }
@@ -376,7 +375,7 @@ export class PaperService {
       paperAnswers.push(correctAnswers);
     }
 
-    const { id: answerSheetId } = await this._answerSheetService.create({
+    const { id: answerSheetId } = await this.answerSheetService.create({
       userId,
       correctAnswers: paperAnswers,
     });

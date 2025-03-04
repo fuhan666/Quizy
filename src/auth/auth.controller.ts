@@ -7,12 +7,12 @@ import { User } from 'src/common/decorators/user.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private _authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @SkipAuth()
   @UseGuards(AuthGuard('local'))
   @Post('login')
   login(@User() user: RequestUserType) {
-    return this._authService.login(user);
+    return this.authService.login(user);
   }
 }

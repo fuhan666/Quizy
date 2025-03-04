@@ -15,10 +15,10 @@ import { AnswerSheetAnswerDto } from './dto/answer-sheet-answer.dto';
 export class AnswerSheetService {
   constructor(
     @InjectModel(AnswerSheet.name)
-    private _answerSheetModel: Model<AnswerSheet>,
+    private readonly answerSheetModel: Model<AnswerSheet>,
   ) {}
   create({ userId, correctAnswers }: CreateAnswerSheetDto) {
-    const answerSheet = new this._answerSheetModel({
+    const answerSheet = new this.answerSheetModel({
       userId,
       correctAnswers,
       startedAt: new Date(),
@@ -47,7 +47,7 @@ export class AnswerSheetService {
       );
     }
 
-    const answerSheet = await this._answerSheetModel.findById(id);
+    const answerSheet = await this.answerSheetModel.findById(id);
     if (!answerSheet) {
       throw new NotFoundException('Answer sheet not found');
     }
@@ -63,13 +63,13 @@ export class AnswerSheetService {
   }
 
   remove(id: mongoose.Types.ObjectId) {
-    return this._answerSheetModel.findByIdAndDelete(id);
+    return this.answerSheetModel.findByIdAndDelete(id);
   }
 
   async calculateScore(id: mongoose.Types.ObjectId) {
     let totalScore = 0;
 
-    const answerSheetDocument = await this._answerSheetModel.findById(id);
+    const answerSheetDocument = await this.answerSheetModel.findById(id);
     if (!answerSheetDocument) return;
 
     const answers = answerSheetDocument.answers as AnswerSheetAnswerDto[];
@@ -114,7 +114,7 @@ export class AnswerSheetService {
           break;
       }
     }
-    await this._answerSheetModel.findByIdAndUpdate(id, { score: totalScore });
+    await this.answerSheetModel.findByIdAndUpdate(id, { score: totalScore });
   }
 
   areArraysEqualRegardlessOrder(arr1: string[], arr2: string[]): boolean {

@@ -1,19 +1,19 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 export class ApiException extends HttpException {
-  private _errorcCode: number;
-  private _errorMessage: string;
+  private readonly errorCode: number;
+  private readonly errorMessage: string;
 
   constructor(msg: string, errorCode: number) {
     super(msg, HttpStatus.OK);
-    this._errorMessage = msg;
-    this._errorcCode = errorCode;
+    this.errorMessage = msg;
+    this.errorCode = errorCode;
   }
 
   getErrorCode() {
-    return this._errorcCode;
+    return this.errorCode;
   }
   getErrorMessage() {
-    return this._errorMessage;
+    return this.errorMessage;
   }
 }

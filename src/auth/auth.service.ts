@@ -6,15 +6,15 @@ import { RequestUserType } from './dto/request-user.dto';
 @Injectable()
 export class AuthService {
   constructor(
-    private _userService: UserService,
-    private _jwtService: JwtService,
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async validateUser(userName: string, password: string): Promise<any> {
-    const user = await this._userService.findOneByUserName(userName);
+    const user = await this.userService.findOneByUserName(userName);
     if (
       !user ||
-      !(await this._userService.comparePassword(password, user.password))
+      !(await this.userService.comparePassword(password, user.password))
     ) {
       return null;
     }
@@ -25,7 +25,7 @@ export class AuthService {
   login({ userName, id }: RequestUserType) {
     const payload = { username: userName, sub: id };
     return {
-      access_token: this._jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload),
     };
   }
 }

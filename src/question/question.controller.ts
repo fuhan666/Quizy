@@ -20,11 +20,11 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('question')
 export class QuestionController {
-  constructor(private _questionService: QuestionService) {}
+  constructor(private readonly questionService: QuestionService) {}
 
   @Get()
   async getQuestion(@User() user: RequestUserType) {
-    return this._questionService.getQuestions(user.id);
+    return this.questionService.getQuestions(user.id);
   }
 
   @Post()
@@ -32,12 +32,12 @@ export class QuestionController {
     @Body() createQuestionDto: CreateQuestionDto,
     @User() user: RequestUserType,
   ) {
-    return this._questionService.create(user.id, createQuestionDto);
+    return this.questionService.create(user.id, createQuestionDto);
   }
 
   @Delete(':id')
   async delete(@Param('id') id: string, @User() user: RequestUserType) {
-    return this._questionService.delete(id, user.id);
+    return this.questionService.delete(id, user.id);
   }
 
   @Patch(':id')
@@ -46,7 +46,7 @@ export class QuestionController {
     @User() user: RequestUserType,
     @Body() dto: UpdateQuestionDto,
   ) {
-    return this._questionService.update(user.id, id, dto);
+    return this.questionService.update(user.id, id, dto);
   }
 
   @Post('upload-pdf')
@@ -63,6 +63,6 @@ export class QuestionController {
     )
     pdfFile: Express.Multer.File,
   ) {
-    return this._questionService.uploadPdf(user.id, pdfFile);
+    return this.questionService.uploadPdf(user.id, pdfFile);
   }
 }

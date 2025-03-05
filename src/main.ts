@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
-
+import { LoggerErrorInterceptor } from 'nestjs-pino';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
@@ -17,6 +17,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
   app.useGlobalFilters(new ApiExceptionFilter());
+  app.useGlobalInterceptors(new LoggerErrorInterceptor());
   await app.listen(process.env.PORT ?? 7849);
 }
 bootstrap();

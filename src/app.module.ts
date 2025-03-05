@@ -13,6 +13,8 @@ import { PrismaModule } from './shared/prisma/prisma.module';
 import { AnswerSheetModule } from './answer-sheet/answer-sheet.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import * as Joi from 'joi';
+import { LoggerModule } from 'nestjs-pino';
+import { join } from 'path';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,6 +34,31 @@ import * as Joi from 'joi';
         CLOUDFLARE_SECRET_ACCESS_KEY: Joi.string(),
         CLOUDFLARE_R2_BUCKET: Joi.string(),
       }),
+    }),
+    LoggerModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        pinoHttp: {
+          transport:
+            configService.get('NODE_ENV') === 'development'
+              ? {
+                  target: 'pino-pretty',
+                  options: { colorize: true },
+                }
+              : {
+                  level: 'info',
+                  target: 'pino-roll',
+                  options: {
+                    file: join('logs', 'quizy'),
+                    frequency: 'daily',
+                    mkdir: true,
+                    size: '10m',
+                    extension: '.log',
+                    dateFormat: 'yyyy-MM-dd',
+                  },
+                },
+        },
+      }),
+      inject: [ConfigService],
     }),
     QuestionModule,
     UserModule,

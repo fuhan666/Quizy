@@ -6,8 +6,7 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
-import type { Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FindUserDto } from './dto/find-user.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
@@ -16,8 +15,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UserService {
-  private readonly prisma: PrismaService;
-  private readonly ossService: CloudflareOssService;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ossService: CloudflareOssService,
+  ) {}
 
   private async hashPassword(password: string) {
     const salt = await bcrypt.genSalt();
@@ -37,7 +38,7 @@ export class UserService {
       return { id };
     } catch (error) {
       if (
-        error instanceof PrismaClientKnownRequestError &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
         throw new ConflictException('Username already exists');

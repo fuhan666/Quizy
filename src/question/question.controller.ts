@@ -18,6 +18,7 @@ import { User } from 'src/common/decorators/user.decorator';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { GenerateQuestionsDto } from './dto/generate-question.dto';
 @Controller('question')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
@@ -64,5 +65,13 @@ export class QuestionController {
     pdfFile: Express.Multer.File,
   ) {
     return this.questionService.uploadPdf(user.id, pdfFile);
+  }
+
+  @Post('generate-questions')
+  async generateQuestions(
+    @User() user: RequestUserType,
+    @Body() dto: GenerateQuestionsDto,
+  ) {
+    return this.questionService.generateQuestions(user.id, dto);
   }
 }

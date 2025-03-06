@@ -11,7 +11,9 @@ import { Paper } from 'src/paper/schema/paper.schema';
 import { CloudflareOssService } from 'src/shared/oss/cloudflare/cloudflare-oss.service';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-
+import { DifyGenerateQuestionsReqType } from 'src/ai/dify/dto/generate-questions.req.dify.type';
+import { DifyService } from 'src/ai/dify/dify.service';
+import { GenerateQuestionsDto } from './dto/generate-question.dto';
 @Injectable()
 export class QuestionService {
   constructor(
@@ -20,7 +22,8 @@ export class QuestionService {
     @InjectModel(Paper.name)
     private readonly paperModel: Model<Paper>,
     private readonly cloudflareOssService: CloudflareOssService,
-    private readonly prisma: PrismaService,
+    private readonly prismaService: PrismaService,
+    private readonly difyService: DifyService,
   ) {}
 
   public async getQuestions(userId: number) {
@@ -243,6 +246,42 @@ export class QuestionService {
       fileName: file.originalname,
       fileType: file.mimetype,
     };
-    return this.prisma.uploadFileEntity.create({ data });
+    return this.prismaService.uploadFileEntity.create({ data });
+  }
+
+  async generateQuestions(userId: number, dto: GenerateQuestionsDto) {
+    const file = await this.prismaService.uploadFileEntity.findUnique({
+      where: { user: { id: userId }, id: dto.fileId },
+    });
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+    const signedUrl = await this.cloudflareOssService.getSignedUrl(file.file);
+    const generateQuestionsDto: DifyGenerateQuestionsReqType = {
+      url: signedUrl,
+      fileId: file.id,
+    };
+    if (dto.numberOfQuestions) {
+      generateQuestionsDto.numberOfQuestions = dto.numberOfQuestions;
+    }
+    if (dto.targetLanguage) {
+      generateQuestionsDto.targetLanguage = dto.targetLanguage;
+    }
+    const questions = await this.difyService.generateQuestionsByPdf(
+      userId,
+      generateQuestionsDto,
+    );
+    if (questions.length === 0) {
+      return `Generate questions failed`;
+    }
+    for (const q of questions) {
+      const answers = [q.correctAnswer, ...q.wrongAnswers];
+      this.create(userId, {
+        questionText: q.question,
+        answers,
+        relatedFileId: file.id,
+      });
+    }
+    return `Generate ${questions.length} questions successfully`;
   }
 }

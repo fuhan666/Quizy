@@ -11,4 +11,8 @@ export class CreateQuestionDto {
   @IsArray()
   @IsString({ each: true })
   answers: string[];
+
+  @IsNumber()
+  @IsOptional()
+  relatedFileId?: number;
 }

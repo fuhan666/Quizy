@@ -22,19 +22,48 @@ model UserEntity {
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   UploadFileEntity UploadFileEntity[]
+  AiRecordEntity   AiRecordEntity[]
 
   @@map("user")
 }
 
 model UploadFileEntity {
-  id        Int        @id @default(autoincrement())
-  user      UserEntity @relation(fields: [userId], references: [id])
-  userId    Int        @map("user_id")
-  file      String     @db.Text
-  fileName  String     @map("file_name") @db.Text
-  fileType  String     @map("file_type") @db.VarChar()
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  id             Int              @id @default(autoincrement())
+  user           UserEntity       @relation(fields: [userId], references: [id])
+  userId         Int              @map("user_id")
+  file           String           @db.Text
+  fileName       String           @map("file_name") @db.Text
+  fileType       String           @map("file_type") @db.VarChar()
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  AiRecordEntity AiRecordEntity[]
 
   @@map("upload_file")
+}
+
+model AiRecordEntity {
+  id          Int               @id @default(autoincrement())
+  userId      Int               @map("user_id")
+  user        UserEntity        @relation(fields: [userId], references: [id])
+  serviceName String            @map("service_name")
+  status      AiRecordStatus    @default(PENDING)
+  fileId      Int?              @map("file_id")
+  file        UploadFileEntity? @relation(fields: [fileId], references: [id])
+  requestBody Json?             @map("request_body") @db.JsonB
+  result      Json?             @db.JsonB
+  tokens      Int?
+  error       String?           @db.Text
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@map("ai_record")
+}
+
+enum AiRecordStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+
+  @@map("ai_record_status")
 }

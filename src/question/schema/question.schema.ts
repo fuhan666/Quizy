@@ -31,6 +31,9 @@ export class Question {
     required: true,
   })
   answers: Map<string, string>;
+
+  @Prop({ type: Number })
+  relatedFileId?: number;
 }
 
 export const QuestionSchema = SchemaFactory.createForClass(Question);

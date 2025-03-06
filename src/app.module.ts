@@ -15,6 +15,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import * as Joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import { join } from 'path';
+import { AiModule } from './ai/ai.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -72,6 +73,7 @@ import { join } from 'path';
       inject: [ConfigService],
     }),
     AnswerSheetModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

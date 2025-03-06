@@ -5,7 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Question, QuestionSchema } from './schema/question.schema';
 import { Paper, PaperSchema } from 'src/paper/schema/paper.schema';
 import { OssModule } from 'src/shared/oss/oss.module';
-
+import { AiModule } from 'src/ai/ai.module';
 @Module({
   imports: [
     OssModule,
@@ -13,6 +13,7 @@ import { OssModule } from 'src/shared/oss/oss.module';
       { name: Question.name, schema: QuestionSchema },
       { name: Paper.name, schema: PaperSchema },
     ]),
+    AiModule,
   ],
   providers: [QuestionService],
   exports: [QuestionService],

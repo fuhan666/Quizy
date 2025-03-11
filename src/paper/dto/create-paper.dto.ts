@@ -9,8 +9,10 @@ import {
   IsNotEmpty,
   IsString,
   IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaperStatus } from './paper-status.enum';
 
 export class CreatePaperDto {
   @IsString()
@@ -32,4 +34,8 @@ export class CreatePaperDto {
   @IsOptional()
   @IsBoolean()
   shuffleQuestions?: boolean;
+
+  @IsOptional()
+  @IsEnum(PaperStatus)
+  status?: PaperStatus;
 }

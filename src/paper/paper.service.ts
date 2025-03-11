@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -159,6 +160,7 @@ export class PaperService {
       shuffleQuestions,
       paperQuestions,
       permissions,
+      status,
     }: UpdatePaperDto,
   ) {
     const session = await this.paperModel.db.startSession();
@@ -176,6 +178,12 @@ export class PaperService {
       );
       if (!existingPaper) {
         throw new NotFoundException('Paper not found');
+      }
+      if (
+        existingPaper.status === PaperStatus.LOCKED &&
+        (paperQuestions !== undefined || status !== undefined)
+      ) {
+        throw new ForbiddenException('Paper is locked');
       }
 
       await this.validatePermissions(permissions);
@@ -198,6 +206,9 @@ export class PaperService {
       }
       if (shuffleQuestions !== undefined) {
         existingPaper.shuffleQuestions = shuffleQuestions;
+      }
+      if (status !== undefined) {
+        existingPaper.status = status;
       }
       await existingPaper.save({ session });
 

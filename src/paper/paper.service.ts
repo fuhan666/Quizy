@@ -22,6 +22,7 @@ import {
 import { PaperQuestionDetailDto } from './dto/paper-question-detail.dto';
 import { QuestionService } from 'src/question/question.service';
 import { PaperStatus } from './dto/paper-status.enum';
+import { shuffle } from 'src/shared/utils/array.utils';
 @Injectable()
 export class PaperService {
   constructor(
@@ -315,7 +316,8 @@ export class PaperService {
     if (!paper) {
       throw new NotFoundException('Paper not found');
     }
-    const { paperQuestions, permissions } = paper;
+    const { shuffleQuestions, permissions } = paper;
+
     if (permissions && paper.userId !== userId) {
       if (!permissions?.public) {
         if (permissions?.accessibleByUserIds) {
@@ -329,6 +331,10 @@ export class PaperService {
     const questionsToTake: Record<string, any>[] = [];
     const paperAnswers: AnswerSheetCorrectAnswerType[] = [];
 
+    let paperQuestions = paper.paperQuestions;
+    if (shuffleQuestions) {
+      paperQuestions = shuffle(paperQuestions);
+    }
     let qaOrder = 0;
     for (const {
       questionId,

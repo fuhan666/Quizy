@@ -12,12 +12,14 @@ import { FindUserDto } from './dto/find-user.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
 import { CloudflareOssService } from 'src/shared/oss/cloudflare/cloudflare-oss.service';
 import { v4 as uuidv4 } from 'uuid';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ossService: CloudflareOssService,
+    @InjectPinoLogger(UserService.name) private readonly logger: PinoLogger,
   ) {}
 
   private async hashPassword(password: string) {
@@ -94,7 +96,7 @@ export class UserService {
       try {
         await this.ossService.delete(currentUser.avatar);
       } catch (error) {
-        console.warn('Failed to delete old avatar:', error);
+        this.logger.warn('Failed to delete old avatar:', error);
       }
     }
 

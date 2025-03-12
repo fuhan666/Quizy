@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
-export type PaperStatisticsDocument = HydratedDocument<PaperStatistics>;
+export type PaperQuestionStatsDocument = HydratedDocument<PaperQuestionStats>;
 
-@Schema({ timestamps: true, collection: 'paper_statistics' })
-export class PaperStatistics {
+@Schema({ timestamps: true, collection: 'paper_question_stats' })
+export class PaperQuestionStats {
   @Prop({ type: Types.ObjectId, required: true, ref: 'Paper' })
   paperId: Types.ObjectId;
 
@@ -18,5 +18,5 @@ export class PaperStatistics {
   correctAttempts: number;
 }
 
-export const PaperStatisticsSchema =
-  SchemaFactory.createForClass(PaperStatistics);
+export const PaperQuestionStatsSchema =
+  SchemaFactory.createForClass(PaperQuestionStats);

@@ -9,8 +9,8 @@ import { Question, QuestionSchema } from 'src/question/schema/question.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PaperListener } from './paper.listener';
 import {
-  PaperStatistics,
-  PaperStatisticsSchema,
+  PaperQuestionStats,
+  PaperQuestionStatsSchema,
 } from './schema/paper-statistics.schema';
 import {
   AnswerSheet,
@@ -25,7 +25,7 @@ import {
     MongooseModule.forFeature([
       { name: Paper.name, schema: PaperSchema },
       { name: Question.name, schema: QuestionSchema },
-      { name: PaperStatistics.name, schema: PaperStatisticsSchema },
+      { name: PaperQuestionStats.name, schema: PaperQuestionStatsSchema },
       { name: AnswerSheet.name, schema: AnswerSheetSchema },
     ]),
   ],

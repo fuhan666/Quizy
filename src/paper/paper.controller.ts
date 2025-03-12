@@ -71,11 +71,11 @@ export class PaperController {
     return this.papersService.take(user.id, id);
   }
 
-  @Get(':id/statistics')
-  async getPaperStatistics(
+  @Get(':id/stats')
+  async getPaperQuestionStats(
     @User() user: RequestUserType,
     @Param('id') id: Types.ObjectId,
   ) {
-    return this.papersService.getPaperStatistics(user.id, id);
+    return this.papersService.getPaperQuestionStats(user.id, id);
   }
 }

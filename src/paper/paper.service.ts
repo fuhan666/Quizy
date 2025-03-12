@@ -23,7 +23,7 @@ import { PaperQuestionDetailDto } from './dto/paper-question-detail.dto';
 import { QuestionService } from 'src/question/question.service';
 import { PaperStatus } from './dto/paper-status.enum';
 import { shuffle } from 'src/shared/utils/array.utils';
-import { PaperStatistics } from './schema/paper-statistics.schema';
+import { PaperQuestionStats } from './schema/paper-statistics.schema';
 @Injectable()
 export class PaperService {
   constructor(
@@ -34,8 +34,8 @@ export class PaperService {
     private readonly paperModel: Model<Paper>,
     @InjectModel(Question.name)
     private readonly questionModel: Model<Question>,
-    @InjectModel(PaperStatistics.name)
-    private readonly paperStatisticsModel: Model<PaperStatistics>,
+    @InjectModel(PaperQuestionStats.name)
+    private readonly paperStatisticsModel: Model<PaperQuestionStats>,
   ) {}
 
   private queryPaperPermissionWhere = (userId: number) => ({
@@ -405,7 +405,7 @@ export class PaperService {
     return { questions: questionsToTake, answerSheetId };
   }
 
-  async getPaperStatistics(userId: number, paperId: Types.ObjectId) {
+  async getPaperQuestionStats(userId: number, paperId: Types.ObjectId) {
     const paper = await this.paperModel.findOne({
       _id: paperId,
       ...this.queryPaperPermissionWhere(userId),

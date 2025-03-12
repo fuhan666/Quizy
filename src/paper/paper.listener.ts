@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AnswerSheet } from 'src/answer-sheet/schema/answer-sheet.schema';
-import { PaperStatistics } from './schema/paper-statistics.schema';
+import { PaperQuestionStats } from './schema/paper-statistics.schema';
 import { AnswerSheetAnswerDto } from 'src/answer-sheet/dto/answer-sheet-answer.dto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
@@ -11,8 +11,8 @@ import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
 @Injectable()
 export class PaperListener {
   constructor(
-    @InjectModel(PaperStatistics.name)
-    private readonly paperStatisticsModel: Model<PaperStatistics>,
+    @InjectModel(PaperQuestionStats.name)
+    private readonly paperQuestionStatsModel: Model<PaperQuestionStats>,
     @InjectModel(AnswerSheet.name)
     private readonly answerSheetModel: Model<AnswerSheet>,
     @InjectPinoLogger(PaperListener.name)
@@ -50,12 +50,12 @@ export class PaperListener {
       for (const correctAnswer of correctAnswers) {
         if (!answersMap.has(correctAnswer.order)) continue;
         // Find or create statistics record
-        let statisticsRecord = await this.paperStatisticsModel.findOne({
+        let statisticsRecord = await this.paperQuestionStatsModel.findOne({
           paperId,
           questionId: correctAnswer.questionId,
         });
         if (!statisticsRecord) {
-          statisticsRecord = new this.paperStatisticsModel({
+          statisticsRecord = new this.paperQuestionStatsModel({
             paperId,
             questionId: correctAnswer.questionId,
             totalAttempts: 0,

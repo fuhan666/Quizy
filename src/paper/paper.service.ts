@@ -13,7 +13,7 @@ import { QuestionTypeEnum } from './dto/question-type.enum';
 import { AnswerSheetService } from 'src/answer-sheet/answer-sheet.service';
 import { AnswerSheetCorrectAnswerType } from 'src/answer-sheet/dto/answer-sheet-correct-answer.dto';
 import { Paper, PaperDocument } from './schema/paper.schema';
-import mongoose, { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Question,
@@ -23,6 +23,7 @@ import { PaperQuestionDetailDto } from './dto/paper-question-detail.dto';
 import { QuestionService } from 'src/question/question.service';
 import { PaperStatus } from './dto/paper-status.enum';
 import { shuffle } from 'src/shared/utils/array.utils';
+import { PaperStatistics } from './schema/paper-statistics.schema';
 @Injectable()
 export class PaperService {
   constructor(
@@ -33,6 +34,8 @@ export class PaperService {
     private readonly paperModel: Model<Paper>,
     @InjectModel(Question.name)
     private readonly questionModel: Model<Question>,
+    @InjectModel(PaperStatistics.name)
+    private readonly paperStatisticsModel: Model<PaperStatistics>,
   ) {}
 
   private queryPaperPermissionWhere = (userId: number) => ({
@@ -110,7 +113,7 @@ export class PaperService {
     return papers;
   }
 
-  async findOne(userId: number, id: mongoose.Types.ObjectId) {
+  async findOne(userId: number, id: Types.ObjectId) {
     const paperRecord = await this.paperModel.findOne({
       ...this.queryPaperPermissionWhere(userId),
       _id: id,
@@ -155,7 +158,7 @@ export class PaperService {
 
   async update(
     userId: number,
-    id: mongoose.Types.ObjectId,
+    id: Types.ObjectId,
     {
       paperName,
       shuffleQuestions,
@@ -223,7 +226,7 @@ export class PaperService {
     }
   }
 
-  async remove(userId: number, id: mongoose.Types.ObjectId) {
+  async remove(userId: number, id: Types.ObjectId) {
     const session = await this.paperModel.db.startSession();
     session.startTransaction();
     try {
@@ -264,7 +267,7 @@ export class PaperService {
       );
     }
 
-    const questionMap: Map<mongoose.Types.ObjectId, QuestionDocument> = new Map(
+    const questionMap: Map<Types.ObjectId, QuestionDocument> = new Map(
       questions.map((q) => [q._id, q]),
     );
     for (const { questionId, answerIds, correctAnswerIds } of paperQuestions) {
@@ -308,7 +311,7 @@ export class PaperService {
     }
   }
 
-  async take(userId: number, id: mongoose.Types.ObjectId) {
+  async take(userId: number, id: Types.ObjectId) {
     const paper: PaperDocument | null = await this.paperModel.findOne({
       _id: id,
       status: { $ne: PaperStatus.DRAFT },
@@ -394,10 +397,22 @@ export class PaperService {
 
     const { id: answerSheetId } = await this.answerSheetService.create({
       userId,
+      paperId: id,
       correctAnswers: paperAnswers,
     });
     paper.status = PaperStatus.LOCKED;
     await paper.save();
     return { questions: questionsToTake, answerSheetId };
+  }
+
+  async getPaperStatistics(userId: number, paperId: Types.ObjectId) {
+    const paper = await this.paperModel.findOne({
+      _id: paperId,
+      ...this.queryPaperPermissionWhere(userId),
+    });
+    if (!paper) {
+      throw new NotFoundException('Paper not found');
+    }
+    return this.paperStatisticsModel.find({ paperId }, '-_id -__v').exec();
   }
 }

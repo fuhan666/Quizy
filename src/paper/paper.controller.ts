@@ -14,7 +14,7 @@ import { CreatePaperDto } from './dto/create-paper.dto';
 import { UpdatePaperDto } from './dto/update-paper.dto';
 import { RequestUserType } from 'src/auth/dto/request-user.dto';
 import { User } from 'src/common/decorators/user.decorator';
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 
 @Controller('paper')
 export class PaperController {
@@ -41,10 +41,7 @@ export class PaperController {
   }
 
   @Get(':id')
-  findOne(
-    @User() user: RequestUserType,
-    @Param('id') id: mongoose.Types.ObjectId,
-  ) {
+  findOne(@User() user: RequestUserType, @Param('id') id: Types.ObjectId) {
     return this.papersService.findOne(user.id, id);
   }
 
@@ -58,25 +55,27 @@ export class PaperController {
   )
   update(
     @User() user: RequestUserType,
-    @Param('id') id: mongoose.Types.ObjectId,
+    @Param('id') id: Types.ObjectId,
     @Body() updatePaperDto: UpdatePaperDto,
   ) {
     return this.papersService.update(user.id, id, updatePaperDto);
   }
 
   @Delete(':id')
-  remove(
-    @User() user: RequestUserType,
-    @Param('id') id: mongoose.Types.ObjectId,
-  ) {
+  remove(@User() user: RequestUserType, @Param('id') id: Types.ObjectId) {
     return this.papersService.remove(user.id, id);
   }
 
   @Post(':id/take')
-  take(
-    @User() user: RequestUserType,
-    @Param('id') id: mongoose.Types.ObjectId,
-  ) {
+  take(@User() user: RequestUserType, @Param('id') id: Types.ObjectId) {
     return this.papersService.take(user.id, id);
+  }
+
+  @Get(':id/statistics')
+  async getPaperStatistics(
+    @User() user: RequestUserType,
+    @Param('id') id: Types.ObjectId,
+  ) {
+    return this.papersService.getPaperStatistics(user.id, id);
   }
 }

@@ -16,6 +16,8 @@ import * as Joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import { join } from 'path';
 import { AiModule } from './ai/ai.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { createKeyv } from '@keyv/redis';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -59,6 +61,19 @@ import { AiModule } from './ai/ai.module';
                 },
         },
       }),
+      inject: [ConfigService],
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: (configService: ConfigService) => {
+        return {
+          stores: [
+            createKeyv(configService.get('REDIS_URI'), {
+              namespace: 'quizy',
+            }),
+          ],
+        };
+      },
       inject: [ConfigService],
     }),
     QuestionModule,

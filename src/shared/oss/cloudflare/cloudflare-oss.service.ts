@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
@@ -8,13 +8,17 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { CloudflareR2Config } from './cloudflare-oss.config';
-
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 @Injectable()
 export class CloudflareOssService {
   private readonly s3Client: S3Client;
   private readonly config: CloudflareR2Config;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) {
     const config = this.configService.get<CloudflareR2Config>('cloudflareR2');
     if (!config) {
       throw new Error('Cloudflare R2 configuration is missing');
@@ -56,11 +60,18 @@ export class CloudflareOssService {
   }
 
   async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
+    const cacheKey = `cloudflare-signed-url:${key}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) {
+      return cached as string;
+    }
     const command = new GetObjectCommand({
       Bucket: this.config.bucket,
       Key: key,
     });
 
-    return await getSignedUrl(this.s3Client, command, { expiresIn });
+    const url = await getSignedUrl(this.s3Client, command, { expiresIn });
+    await this.cacheManager.set(cacheKey, url, expiresIn * 1000);
+    return url;
   }
 }

@@ -18,6 +18,7 @@ import { join } from 'path';
 import { AiModule } from './ai/ai.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
+import { FileModule } from './file/file.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -89,6 +90,7 @@ import { createKeyv } from '@keyv/redis';
     }),
     AnswerSheetModule,
     AiModule,
+    FileModule,
   ],
   controllers: [AppController],
   providers: [

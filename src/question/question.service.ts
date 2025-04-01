@@ -10,7 +10,6 @@ import { PaperStatus } from 'src/paper/dto/paper-status.enum';
 import { Paper } from 'src/paper/schema/paper.schema';
 import { CloudflareOssService } from 'src/shared/oss/cloudflare/cloudflare-oss.service';
 import { PrismaService } from 'src/shared/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { DifyGenerateQuestionsReqType } from 'src/ai/dify/dto/generate-questions.req.dify.type';
 import { DifyService } from 'src/ai/dify/dify.service';
 import { GenerateQuestionsDto } from './dto/generate-question.dto';
@@ -236,19 +235,6 @@ export class QuestionService {
     }
   }
 
-  async uploadPdf(userId: number, file: Express.Multer.File) {
-    const ext = file.originalname.split('.').pop();
-    const key = `pdfs/${userId}/${uuidv4()}.${ext}`;
-    await this.cloudflareOssService.upload(key, file.buffer, file.mimetype);
-    const data: Prisma.UploadFileEntityCreateInput = {
-      user: { connect: { id: userId } },
-      file: key,
-      fileName: file.originalname,
-      fileType: file.mimetype,
-    };
-    return this.prismaService.uploadFileEntity.create({ data });
-  }
-
   async generateQuestions(userId: number, dto: GenerateQuestionsDto) {
     const file = await this.prismaService.uploadFileEntity.findUnique({
       where: { user: { id: userId }, id: dto.fileId },
@@ -276,7 +262,7 @@ export class QuestionService {
     }
     for (const q of questions) {
       const answers = [q.correctAnswer, ...q.wrongAnswers];
-      this.create(userId, {
+      await this.create(userId, {
         questionText: q.question,
         answers,
         relatedFileId: file.id,
